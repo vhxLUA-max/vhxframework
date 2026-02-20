@@ -94,6 +94,21 @@ local function Draggable(frame,handle)
     end)
 end
 
+-- FIX: Helper to fade a Frame in/out by tweening all descendant labels/frames
+-- GroupTransparency only exists on Model, not Frame. We use Visible + position tween instead.
+local function FadeWindow(win, visible, onDone)
+    if visible then
+        win.Visible = true
+        T(win, {Position = UDim2.new(0.5, -290, 0.5, -220)}, 0.22, Enum.EasingStyle.Quad)
+    else
+        T(win, {Position = UDim2.new(0.5, -290, 0.5, -200)}, 0.18, Enum.EasingStyle.Quad)
+        task.delay(0.2, function()
+            win.Visible = false
+            if onDone then onDone() end
+        end)
+    end
+end
+
 function NebulaUI:CreateWindow(cfg)
     cfg=cfg or {}
     local Title    =cfg.Title     or "NebulaUI"
@@ -162,10 +177,10 @@ function NebulaUI:CreateWindow(cfg)
     local WinObj={_tabs={},_gui=Gui,_win=Win,_C=C}
     local _visible=true; local _minimized=false
 
+    -- FIX: SetVisible now uses Visible toggling + position tween instead of GroupTransparency
     function WinObj:SetVisible(v)
         _visible=v
-        if v then Win.Visible=true; T(Win,{GroupTransparency=0},0.2)
-        else T(Win,{GroupTransparency=1},0.2); task.delay(0.22,function() Win.Visible=false end) end
+        FadeWindow(Win, v)
     end
     function WinObj:GetVisible() return _visible end
     function WinObj:Destroy() Gui:Destroy() end
