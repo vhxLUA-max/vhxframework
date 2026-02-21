@@ -2,9 +2,9 @@ local Players      = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UIS          = game:GetService("UserInputService")
 local HttpService  = game:GetService("HttpService")
+local RunService   = game:GetService("RunService")
 local LocalPlayer  = Players.LocalPlayer
 
--- ─── CONFIG ENGINE ────────────────────────────────────────────────────────────
 local NightLib        = {}
 NightLib.__index      = NightLib
 NightLib.Flags        = {}
@@ -65,7 +65,6 @@ local function _saved(flag, fallback)
     if data and data[flag] ~= nil then return data[flag] end
     return fallback
 end
--- ─────────────────────────────────────────────────────────────────────────────
 
 local Themes = {
     Dark = {
@@ -91,6 +90,22 @@ local Themes = {
         TextPrimary   = Color3.fromRGB(20,20,30),    TextSecondary = Color3.fromRGB(100,100,120),
         Divider       = Color3.fromRGB(210,210,225), ToggleOn      = Color3.fromRGB(50,180,100),
         ToggleOff     = Color3.fromRGB(190,190,205), NotifyBg      = Color3.fromRGB(40,100,200),
+    },
+    Aqua = {
+        Background    = Color3.fromRGB(12,22,30),    Sidebar       = Color3.fromRGB(8,16,24),
+        Panel         = Color3.fromRGB(18,32,44),    PanelAlt      = Color3.fromRGB(22,40,54),
+        Accent        = Color3.fromRGB(0,200,200),   AccentAlt     = Color3.fromRGB(0,255,180),
+        TextPrimary   = Color3.fromRGB(220,245,255), TextSecondary = Color3.fromRGB(100,160,185),
+        Divider       = Color3.fromRGB(20,50,70),    ToggleOn      = Color3.fromRGB(0,200,200),
+        ToggleOff     = Color3.fromRGB(25,50,65),    NotifyBg      = Color3.fromRGB(0,80,100),
+    },
+    Rose = {
+        Background    = Color3.fromRGB(20,12,16),    Sidebar       = Color3.fromRGB(14,8,12),
+        Panel         = Color3.fromRGB(30,18,24),    PanelAlt      = Color3.fromRGB(38,22,30),
+        Accent        = Color3.fromRGB(255,80,140),  AccentAlt     = Color3.fromRGB(255,150,80),
+        TextPrimary   = Color3.fromRGB(255,230,240), TextSecondary = Color3.fromRGB(160,110,130),
+        Divider       = Color3.fromRGB(55,28,40),    ToggleOn      = Color3.fromRGB(255,80,140),
+        ToggleOff     = Color3.fromRGB(55,28,40),    NotifyBg      = Color3.fromRGB(120,20,60),
     },
 }
 
@@ -129,15 +144,15 @@ end
 local Icons = {
     home="⌂",settings="⚙",user="👤",star="★",bell="🔔",code="</>",map="◉",shield="◈",zap="⚡",
     eye="◎",lock="🔒",key="🔑",trash="🗑",copy="⎘",download="↓",upload="↑",search="⌕",plus="+",
-    minus="−",check="✓",x="✕",arrow_right="→",arrow_left="←",refresh="↻",wifi="◌",globe="◉",
+    minus="−",check="✓",x="x",arrow_right="→",arrow_left="←",refresh="↻",wifi="◌",globe="◉",
     server="▣",cpu="⬚",database="⬡",layers="⬜",terminal=">_",sword="⚔",gamepad="🎮",flag="⚑",
-    heart="♥",info="ℹ",alert="⚠",
+    heart="♥",info="ℹ",alert="⚠",chart="📊",list="☰",grid="⊞",folder="📁",paint="🎨",
+    pin="📌",cursor="◈",fire="🔥",crown="♛",diamond="◆",moon="☽",sun="☀",cloud="☁",
 }
 local function GetIcon(n) return Icons[n and n:lower()] or "●" end
 
 NightLib:LoadConfig("Default")
 
--- ─── CREATE WINDOW ────────────────────────────────────────────────────────────
 function NightLib:CreateWindow(config)
     config = config or {}
     local Title = config.Title    or "NightLib"
@@ -165,7 +180,6 @@ function NightLib:CreateWindow(config)
         ScaleType=Enum.ScaleType.Slice, SliceCenter=Rect.new(23,23,277,277),
     }, MF)
 
-    -- Top bar
     local TB = New("Frame", {Size=UDim2.new(1,0,0,48), BackgroundColor3=Theme.Sidebar, BorderSizePixel=0, ZIndex=2}, MF)
     local LF = New("Frame", {Size=UDim2.new(0,32,0,32), Position=UDim2.new(0,10,0.5,-16), BackgroundColor3=Theme.Accent, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,8)}, LF)
@@ -188,13 +202,11 @@ function NightLib:CreateWindow(config)
     end)
     MakeDraggable(MF, TB)
 
-    -- Sidebar
     local SB = New("Frame", {Size=UDim2.new(0,54,1,-48), Position=UDim2.new(0,0,0,48), BackgroundColor3=Theme.Sidebar, BorderSizePixel=0, ZIndex=2}, MF)
     New("UIListLayout", {FillDirection=Enum.FillDirection.Vertical, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,4)}, SB)
     New("UIPadding", {PaddingTop=UDim.new(0,10), PaddingBottom=UDim.new(0,10), PaddingLeft=UDim.new(0,7), PaddingRight=UDim.new(0,7)}, SB)
     New("Frame", {Size=UDim2.new(0,1,1,-48), Position=UDim2.new(0,54,0,48), BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=2}, MF)
 
-    -- Content area
     local CA = New("Frame", {Size=UDim2.new(1,-55,1,-48), Position=UDim2.new(0,55,0,48), BackgroundTransparency=1, BorderSizePixel=0, ZIndex=2, ClipsDescendants=true}, MF)
     local NC = New("Frame", {Size=UDim2.new(0,260,1,0), Position=UDim2.new(1,-270,0,0), BackgroundTransparency=1, ZIndex=10}, CA)
     New("UIListLayout", {FillDirection=Enum.FillDirection.Vertical, VerticalAlignment=Enum.VerticalAlignment.Bottom, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,6)}, NC)
@@ -202,7 +214,6 @@ function NightLib:CreateWindow(config)
 
     local WO  = {Theme=Theme, Tabs={}}
     local visible = true
-    -- FIX: stored in an upvalue table so SetToggleKey mutates it and the listener reads the new value
     local keys = {toggle = config.ToggleKey or Enum.KeyCode.RightControl}
 
     function WO:SetVisible(s) visible = s; MF.Visible = s end
@@ -210,6 +221,13 @@ function NightLib:CreateWindow(config)
     function WO:Destroy() SG:Destroy() end
     function WO:SetToggleKey(k) keys.toggle = k end
     function WO:GetToggleKey() return keys.toggle end
+
+    function WO:SetTheme(themeName)
+        local t = Themes[themeName]
+        if not t then return end
+        Theme = t
+        WO.Theme = t
+    end
 
     UIS.InputBegan:Connect(function(i, gpe)
         if not gpe and i.KeyCode == keys.toggle then WO:SetVisible(not visible) end
@@ -227,6 +245,29 @@ function NightLib:CreateWindow(config)
         Tween(N, {BackgroundTransparency=0.1}, 0.3)
         Tween(PB, {Size=UDim2.new(0,0,0,3)}, dur, Enum.EasingStyle.Linear)
         task.delay(dur, function() Tween(N, {BackgroundTransparency=1}, 0.3); task.wait(0.3); N:Destroy() end)
+    end
+
+    function WO:Dialog(cfg)
+        cfg = cfg or {}
+        local overlay = New("Frame", {Size=UDim2.new(1,0,1,0), BackgroundColor3=Color3.new(0,0,0), BackgroundTransparency=0.5, ZIndex=50}, MF)
+        local DB = New("Frame", {Size=UDim2.new(0,320,0,160), Position=UDim2.new(0.5,-160,0.5,-80), BackgroundColor3=Theme.Panel, BorderSizePixel=0, ZIndex=51}, overlay)
+        New("UICorner", {CornerRadius=UDim.new(0,10)}, DB)
+        New("UIStroke", {Color=Theme.Accent, Thickness=1}, DB)
+        New("TextLabel", {Size=UDim2.new(1,-20,0,30), Position=UDim2.new(0,10,0,12), BackgroundTransparency=1, Text=cfg.Title or "Confirm", TextColor3=Theme.TextPrimary, TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=52}, DB)
+        New("TextLabel", {Size=UDim2.new(1,-20,0,50), Position=UDim2.new(0,10,0,48), BackgroundTransparency=1, Text=cfg.Content or "", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=52}, DB)
+        local btns = cfg.Buttons or {{Title="OK", Color=Theme.Accent, Callback=function() end}}
+        local bW = (300 - (#btns-1)*8) / #btns
+        for i, b in ipairs(btns) do
+            local xPos = 10 + (i-1)*(bW+8)
+            local BB = New("TextButton", {Size=UDim2.new(0,bW,0,30), Position=UDim2.new(0,xPos,1,-42), BackgroundColor3=b.Color or Theme.Accent, Text=b.Title or "OK", TextColor3=Color3.new(1,1,1), TextSize=13, Font=Enum.Font.GothamBold, ZIndex=52}, DB)
+            New("UICorner", {CornerRadius=UDim.new(0,6)}, BB)
+            BB.MouseButton1Click:Connect(function()
+                overlay:Destroy()
+                task.spawn(b.Callback or function() end)
+            end)
+        end
+        DB.Position = UDim2.new(0.5,-160,0.3,-80)
+        Tween(DB, {Position=UDim2.new(0.5,-160,0.5,-80)}, 0.3, Enum.EasingStyle.Back)
     end
 
     function WO:CreateTab(cfg)
@@ -263,6 +304,7 @@ function NightLib:CreateWindow(config)
         if #WO.Tabs == 1 then Activate() end
 
         local TO = {}
+        function TO:Select() Activate() end
 
         function TO:CreateSection(cfg)
             cfg = cfg or {}
@@ -278,7 +320,6 @@ function NightLib:CreateWindow(config)
             local ord = 1
             local function NO() ord = ord+1; return ord end
 
-            -- ── Divider ─────────────────────────────────────────────────────────
             function SO:CreateDivider(cfg)
                 cfg = cfg or {}
                 local d = New("Frame", {Size=UDim2.new(1,0,0,1), BackgroundColor3=cfg.Color or Theme.Divider, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
@@ -288,7 +329,6 @@ function NightLib:CreateWindow(config)
                 return o
             end
 
-            -- ── Label (read-only display row) ────────────────────────────────────
             function SO:CreateLabel(cfg)
                 cfg = cfg or {}
                 local LF = New("Frame", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
@@ -307,8 +347,6 @@ function NightLib:CreateWindow(config)
                 return obj
             end
 
-            -- ── Image (avatar / thumbnail display) ──────────────────────────────
-            -- Image is an rbxthumb:// or asset URI; Circle=true makes it round
             function SO:CreateImage(cfg)
                 cfg = cfg or {}
                 local imgH  = cfg.Size or 72
@@ -321,15 +359,10 @@ function NightLib:CreateWindow(config)
                     yOff = 24
                 end
                 local IL = New("ImageLabel", {
-                    Size=UDim2.new(0,imgH,0,imgH),
-                    Position=UDim2.new(0.5,-imgH/2,0,yOff),
-                    BackgroundTransparency=1,
-                    Image=cfg.Image or "",
-                    ScaleType=Enum.ScaleType.Fit,
-                    ZIndex=5,
+                    Size=UDim2.new(0,imgH,0,imgH), Position=UDim2.new(0.5,-imgH/2,0,yOff),
+                    BackgroundTransparency=1, Image=cfg.Image or "", ScaleType=Enum.ScaleType.Fit, ZIndex=5,
                 }, IF)
                 if cfg.Circle then New("UICorner", {CornerRadius=UDim.new(0.5,0)}, IL) end
-                -- border ring around avatar
                 New("UIStroke", {Color=Theme.Accent, Thickness=2, ApplyStrokeMode=Enum.ApplyStrokeMode.Border}, IL)
                 local obj = {}
                 function obj:Set(img) IL.Image = img end
@@ -337,7 +370,6 @@ function NightLib:CreateWindow(config)
                 return obj
             end
 
-            -- ── Button ───────────────────────────────────────────────────────────
             function SO:CreateButton(cfg)
                 cfg = cfg or {}
                 local BF = New("TextButton", {Size=UDim2.new(1,0,0,cfg.Description and 50 or 36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, Text="", ZIndex=4, LayoutOrder=NO()}, SF)
@@ -355,11 +387,14 @@ function NightLib:CreateWindow(config)
                     task.spawn(cfg.Callback or function() end)
                 end)
                 local obj = {_frame=BF}
-                function obj:Update(c) if c.Title then BF:FindFirstChild("TextLabel").Text = c.Title end end
+                function obj:SetTitle(t) local l = BF:FindFirstChildWhichIsA("TextLabel"); if l then l.Text = t end end
+                function obj:SetEnabled(e)
+                    BF.Active = e
+                    Tween(BF, {BackgroundTransparency=e and 0 or 0.5}, 0.15)
+                end
                 return obj
             end
 
-            -- ── Toggle ───────────────────────────────────────────────────────────
             function SO:CreateToggle(cfg)
                 cfg = cfg or {}
                 local flag = cfg.Flag
@@ -375,7 +410,6 @@ function NightLib:CreateWindow(config)
                 New("UICorner", {CornerRadius=UDim.new(0,10)}, SBg)
                 local Knob = New("Frame", {Size=UDim2.new(0,14,0,14), Position=val and UDim2.new(1,-17,0.5,-7) or UDim2.new(0,3,0.5,-7), BackgroundColor3=Color3.new(1,1,1), BorderSizePixel=0, ZIndex=6}, SBg)
                 New("UICorner", {CornerRadius=UDim.new(0,7)}, Knob)
-                -- single button on the switch only (prevents double-fire)
                 New("TextButton", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="", ZIndex=7}, SBg)
                     .MouseButton1Click:Connect(function()
                         val = not val
@@ -390,20 +424,21 @@ function NightLib:CreateWindow(config)
                     val = v
                     Tween(SBg,  {BackgroundColor3=v and Theme.ToggleOn or Theme.ToggleOff}, 0.2)
                     Tween(Knob, {Position=v and UDim2.new(1,-17,0.5,-7) or UDim2.new(0,3,0.5,-7)}, 0.2)
+                    if flag then _autoSave(flag, v) end
                 end
                 function tObj:Get() return val end
-                function tObj:Update(c) if c.Title then TF2:FindFirstChildWhichIsA("TextLabel").Text = c.Title end end
+                function tObj:SetTitle(t) local l = TF2:FindFirstChildWhichIsA("TextLabel"); if l then l.Text = t end end
                 if flag then NightLib.Flags[flag] = tObj end
                 return tObj
             end
 
-            -- ── Slider ───────────────────────────────────────────────────────────
             function SO:CreateSlider(cfg)
                 cfg = cfg or {}
                 local flag = cfg.Flag
                 local cb   = cfg.Callback or function() end
                 local sMin = cfg.Min or 0;  local sMax = cfg.Max or 100
                 local suf  = cfg.Suffix or ""
+                local dec  = cfg.Decimals or 0
                 local val  = math.clamp(_saved(flag, cfg.Default or sMin), sMin, sMax)
 
                 local SlF = New("Frame", {Size=UDim2.new(1,0,0,52), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
@@ -422,8 +457,9 @@ function NightLib:CreateWindow(config)
                 local hit = New("TextButton", {Size=UDim2.new(1,0,0,52), BackgroundTransparency=1, Text="", ZIndex=8}, SlF)
                 hit.InputBegan:Connect(function(i)  if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true  end end)
                 hit.InputEnded:Connect(function(i)  if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end end)
+                local function Round(n, d) local m = 10^d; return math.floor(n*m+0.5)/m end
                 local function SetVal(v, fire)
-                    val = math.clamp(math.floor(v), sMin, sMax)
+                    val = math.clamp(Round(v, dec), sMin, sMax)
                     local p = (val-sMin)/(sMax-sMin)
                     Tween(Fill,  {Size=UDim2.new(p,0,1,0)},   0.05)
                     Tween(Thumb, {Position=UDim2.new(p,0,0.5,0)}, 0.05)
@@ -443,46 +479,101 @@ function NightLib:CreateWindow(config)
                 return sObj
             end
 
-            -- ── Dropdown ─────────────────────────────────────────────────────────
             function SO:CreateDropdown(cfg)
                 cfg = cfg or {}
-                local flag = cfg.Flag
-                local cb   = cfg.Callback or function() end
-                local opts = cfg.Options or {}
-                local val  = _saved(flag, cfg.Default or opts[1])
-                local open = false
+                local flag     = cfg.Flag
+                local cb       = cfg.Callback or function() end
+                local opts     = cfg.Options or {}
+                local multi    = cfg.MultiSelect or false
+                local val      = _saved(flag, cfg.Default or (multi and {} or opts[1]))
+                local open     = false
+                local selected = multi and (type(val)=="table" and val or {}) or nil
 
                 local DF = New("Frame", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=5, ClipsDescendants=false, LayoutOrder=NO()}, SF)
                 New("UICorner", {CornerRadius=UDim.new(0,6)}, DF)
                 New("TextLabel", {Size=UDim2.new(0.6,0,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=cfg.Title or "Dropdown", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6}, DF)
-                local VBtn = New("TextButton", {Size=UDim2.new(0,110,0,24), Position=UDim2.new(1,-118,0.5,-12), BackgroundColor3=Theme.Background, Text=tostring(val).." ▾", TextColor3=Theme.Accent, TextSize=11, Font=Enum.Font.GothamBold, ZIndex=6}, DF)
+
+                local displayText = multi and (#selected>0 and table.concat(selected,", ") or "None") or tostring(val)
+                local VBtn = New("TextButton", {Size=UDim2.new(0,110,0,24), Position=UDim2.new(1,-118,0.5,-12), BackgroundColor3=Theme.Background, Text=displayText.." ▾", TextColor3=Theme.Accent, TextSize=11, Font=Enum.Font.GothamBold, TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=6}, DF)
                 New("UICorner", {CornerRadius=UDim.new(0,5)}, VBtn)
-                local DDL = New("Frame", {Size=UDim2.new(0,110,0,math.min(#opts,5)*28+6), Position=UDim2.new(1,-118,1,4), BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=20, ClipsDescendants=true}, DF)
+
+                local maxVis = math.min(#opts, 5)
+                local DDL = New("Frame", {Size=UDim2.new(0,110,0,maxVis*28+6), Position=UDim2.new(1,-118,1,4), BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=20, ClipsDescendants=true}, DF)
                 New("UICorner", {CornerRadius=UDim.new(0,6)}, DDL)
                 New("UIStroke", {Color=Theme.Divider, Thickness=1}, DDL)
                 local DDS = New("ScrollingFrame", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, ScrollBarThickness=2, ZIndex=21, CanvasSize=UDim2.new(0,0,0,#opts*28)}, DDL)
                 New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,0)}, DDS)
                 New("UIPadding", {PaddingTop=UDim.new(0,3), PaddingBottom=UDim.new(0,3)}, DDS)
+
+                local optBtns = {}
+                local function isSelected(o)
+                    if multi then for _, v in ipairs(selected) do if v==o then return true end end return false
+                    else return val==o end
+                end
+                local function updateDisplay()
+                    if multi then VBtn.Text=(#selected>0 and table.concat(selected,", ") or "None").." ▾"
+                    else VBtn.Text=tostring(val).." ▾" end
+                end
+
                 for _, opt in ipairs(opts) do
-                    local OB = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=opt==val and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=tostring(opt), TextColor3=opt==val and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
+                    local sel = isSelected(opt)
+                    local OB = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=sel and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=(multi and (sel and "✓ " or "  ") or "")..tostring(opt), TextColor3=sel and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
+                    optBtns[opt] = OB
                     OB.MouseEnter:Connect(function() Tween(OB, {BackgroundTransparency=0.85, TextColor3=Theme.TextPrimary}, 0.1) end)
-                    OB.MouseLeave:Connect(function() Tween(OB, {BackgroundTransparency=opt==val and 0.7 or 1, TextColor3=opt==val and Theme.TextPrimary or Theme.TextSecondary}, 0.1) end)
+                    OB.MouseLeave:Connect(function() Tween(OB, {BackgroundTransparency=isSelected(opt) and 0.7 or 1, TextColor3=isSelected(opt) and Theme.TextPrimary or Theme.TextSecondary}, 0.1) end)
                     OB.MouseButton1Click:Connect(function()
-                        val = opt; VBtn.Text = tostring(opt).." ▾"
-                        DDL.Visible = false; open = false
-                        if flag then _autoSave(flag, val) end
-                        task.spawn(cb, opt)
+                        if multi then
+                            local found = false
+                            for i, v in ipairs(selected) do if v==opt then table.remove(selected, i); found=true; break end end
+                            if not found then table.insert(selected, opt) end
+                            local s = isSelected(opt)
+                            OB.Text = (s and "✓ " or "  ")..tostring(opt)
+                            Tween(OB, {BackgroundTransparency=s and 0.7 or 1, TextColor3=s and Theme.TextPrimary or Theme.TextSecondary}, 0.1)
+                            if flag then _autoSave(flag, selected) end
+                            task.spawn(cb, selected)
+                        else
+                            val = opt
+                            for o, b in pairs(optBtns) do
+                                Tween(b, {BackgroundTransparency=o==opt and 0.7 or 1, TextColor3=o==opt and Theme.TextPrimary or Theme.TextSecondary}, 0.1)
+                            end
+                            DDL.Visible = false; open = false
+                            if flag then _autoSave(flag, val) end
+                            task.spawn(cb, opt)
+                        end
+                        updateDisplay()
                     end)
                 end
+
                 VBtn.MouseButton1Click:Connect(function() open = not open; DDL.Visible = open end)
+
                 local dObj = {}
-                function dObj:Set(v) val = v; VBtn.Text = tostring(v).." ▾" end
-                function dObj:Get() return val end
+                function dObj:Set(v)
+                    if multi then selected = type(v)=="table" and v or {v}
+                    else val = v end
+                    updateDisplay()
+                    for o, b in pairs(optBtns) do
+                        local s = isSelected(o)
+                        b.Text = (multi and (s and "✓ " or "  ") or "")..tostring(o)
+                        Tween(b, {BackgroundTransparency=s and 0.7 or 1, TextColor3=s and Theme.TextPrimary or Theme.TextSecondary}, 0.1)
+                    end
+                end
+                function dObj:Get() return multi and selected or val end
+                function dObj:Refresh(newOpts)
+                    opts = newOpts
+                    for _, b in pairs(optBtns) do b:Destroy() end
+                    optBtns = {}
+                    for _, opt in ipairs(newOpts) do
+                        local sel = isSelected(opt)
+                        local OB = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=sel and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=(multi and (sel and "✓ " or "  ") or "")..tostring(opt), TextColor3=sel and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
+                        optBtns[opt] = OB
+                    end
+                    DDS.CanvasSize = UDim2.new(0,0,0,#newOpts*28)
+                    DDL.Size = UDim2.new(0,110,0,math.min(#newOpts,5)*28+6)
+                end
                 if flag then NightLib.Flags[flag] = dObj end
                 return dObj
             end
 
-            -- ── ColorPicker ──────────────────────────────────────────────────────
             function SO:CreateColorPicker(cfg)
                 cfg = cfg or {}
                 local flag = cfg.Flag
@@ -538,7 +629,6 @@ function NightLib:CreateWindow(config)
                 return cpObj
             end
 
-            -- ── Input (editable) ─────────────────────────────────────────────────
             function SO:CreateInput(cfg)
                 cfg = cfg or {}
                 local flag = cfg.Flag
@@ -558,13 +648,249 @@ function NightLib:CreateWindow(config)
                 IB.FocusLost:Connect(function(enter)
                     Tween(IB, {BackgroundColor3=Theme.Background}, 0.1)
                     local s = IB:FindFirstChildWhichIsA("UIStroke"); if s then s:Destroy() end
-                    if enter then if flag then _autoSave(flag, IB.Text) end; task.spawn(cb, IB.Text) end
+                    if cfg.FireOnChange or enter then
+                        if flag then _autoSave(flag, IB.Text) end
+                        task.spawn(cb, IB.Text)
+                    end
                 end)
+                if cfg.FireOnChange then
+                    IB:GetPropertyChangedSignal("Text"):Connect(function()
+                        task.spawn(cb, IB.Text)
+                    end)
+                end
                 local iObj = {}
-                function iObj:Set(v) IB.Text = v end
+                function iObj:Set(v) IB.Text = tostring(v) end
                 function iObj:Get() return IB.Text end
                 if flag then NightLib.Flags[flag] = iObj end
                 return iObj
+            end
+
+            function SO:CreateKeybind(cfg)
+                cfg = cfg or {}
+                local flag    = cfg.Flag
+                local cb      = cfg.Callback or function() end
+                local val     = _saved(flag, cfg.Default or Enum.KeyCode.Unknown)
+                local binding = false
+
+                local KF = New("Frame", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, KF)
+                New("TextLabel", {Size=UDim2.new(1,-120,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=cfg.Title or "Keybind", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, KF)
+                local KB = New("TextButton", {Size=UDim2.new(0,90,0,24), Position=UDim2.new(1,-98,0.5,-12), BackgroundColor3=Theme.Background, Text=tostring(val.Name), TextColor3=Theme.Accent, TextSize=11, Font=Enum.Font.GothamBold, ZIndex=5}, KF)
+                New("UICorner", {CornerRadius=UDim.new(0,5)}, KB)
+
+                KB.MouseButton1Click:Connect(function()
+                    if binding then return end
+                    binding = true
+                    KB.Text = "..."
+                    KB.TextColor3 = Theme.AccentAlt
+                    local conn
+                    conn = UIS.InputBegan:Connect(function(i, gpe)
+                        if gpe then return end
+                        if i.UserInputType == Enum.UserInputType.Keyboard then
+                            val = i.KeyCode
+                            KB.Text = i.KeyCode.Name
+                            KB.TextColor3 = Theme.Accent
+                            binding = false
+                            conn:Disconnect()
+                            if flag then _autoSave(flag, tostring(val.Name)) end
+                            task.spawn(cb, val)
+                        end
+                    end)
+                end)
+
+                if cfg.ActivateOnPress then
+                    UIS.InputBegan:Connect(function(i, gpe)
+                        if not gpe and not binding and i.KeyCode == val then
+                            task.spawn(cfg.ActivateOnPress)
+                        end
+                    end)
+                end
+
+                local kObj = {}
+                function kObj:Set(k)
+                    val = k
+                    KB.Text = typeof(k)=="EnumItem" and k.Name or tostring(k)
+                end
+                function kObj:Get() return val end
+                if flag then NightLib.Flags[flag] = kObj end
+                return kObj
+            end
+
+            function SO:CreateMultiButton(cfg)
+                cfg = cfg or {}
+                local btns = cfg.Buttons or {}
+                local MBF = New("Frame", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, MBF)
+                New("UIListLayout", {FillDirection=Enum.FillDirection.Horizontal, HorizontalAlignment=Enum.HorizontalAlignment.Center, VerticalAlignment=Enum.VerticalAlignment.Center, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,6)}, MBF)
+                New("UIPadding", {PaddingLeft=UDim.new(0,8), PaddingRight=UDim.new(0,8)}, MBF)
+                for i, b in ipairs(btns) do
+                    local BB = New("TextButton", {Size=UDim2.new(1/#btns,-8,0,24), BackgroundColor3=Theme.Background, Text=b.Title or "Btn", TextColor3=Theme.TextPrimary, TextSize=12, Font=Enum.Font.GothamBold, ZIndex=5, LayoutOrder=i}, MBF)
+                    New("UICorner", {CornerRadius=UDim.new(0,5)}, BB)
+                    BB.MouseEnter:Connect(function() Tween(BB, {BackgroundColor3=Theme.Divider}, 0.1) end)
+                    BB.MouseLeave:Connect(function() Tween(BB, {BackgroundColor3=Theme.Background}, 0.1) end)
+                    BB.MouseButton1Click:Connect(function()
+                        Tween(BB, {BackgroundColor3=Theme.Accent}, 0.05); task.wait(0.1)
+                        Tween(BB, {BackgroundColor3=Theme.Background}, 0.15)
+                        task.spawn(b.Callback or function() end)
+                    end)
+                end
+            end
+
+            function SO:CreateProgressBar(cfg)
+                cfg = cfg or {}
+                local val  = math.clamp(cfg.Default or 0, 0, 100)
+                local suf  = cfg.Suffix or "%"
+
+                local PF = New("Frame", {Size=UDim2.new(1,0,0,46), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, PF)
+                New("TextLabel", {Size=UDim2.new(1,-80,0,20), Position=UDim2.new(0,10,0,6), BackgroundTransparency=1, Text=cfg.Title or "Progress", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, PF)
+                local VL = New("TextLabel", {Size=UDim2.new(0,70,0,20), Position=UDim2.new(1,-78,0,6), BackgroundTransparency=1, Text=tostring(val)..suf, TextColor3=Theme.Accent, TextSize=12, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=5}, PF)
+                local Trk = New("Frame", {Size=UDim2.new(1,-20,0,6), Position=UDim2.new(0,10,0,30), BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=5}, PF)
+                New("UICorner", {CornerRadius=UDim.new(0,3)}, Trk)
+                local Fill = New("Frame", {Size=UDim2.new(val/100,0,1,0), BackgroundColor3=cfg.Color or Theme.Accent, BorderSizePixel=0, ZIndex=6}, Trk)
+                New("UICorner", {CornerRadius=UDim.new(0,3)}, Fill)
+
+                local pObj = {}
+                function pObj:Set(v)
+                    val = math.clamp(v, 0, 100)
+                    Tween(Fill, {Size=UDim2.new(val/100,0,1,0)}, 0.3)
+                    VL.Text = tostring(math.floor(val))..suf
+                end
+                function pObj:Get() return val end
+                return pObj
+            end
+
+            function SO:CreateParagraph(cfg)
+                cfg = cfg or {}
+                local titleH = cfg.Title and 20 or 0
+                local approxLines = math.ceil(#(cfg.Content or "") / 55)
+                local contentH = math.max(approxLines * 16, 20)
+                local PG = New("Frame", {Size=UDim2.new(1,0,0,titleH+contentH+20), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, PG)
+                New("UIPadding", {PaddingTop=UDim.new(0,8), PaddingBottom=UDim.new(0,8), PaddingLeft=UDim.new(0,10), PaddingRight=UDim.new(0,10)}, PG)
+                if cfg.Title then
+                    New("TextLabel", {Size=UDim2.new(1,0,0,titleH), BackgroundTransparency=1, Text=cfg.Title, TextColor3=Theme.Accent, TextSize=12, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, PG)
+                end
+                local CL = New("TextLabel", {Size=UDim2.new(1,0,0,contentH+8), Position=UDim2.new(0,0,0,titleH+2), BackgroundTransparency=1, Text=cfg.Content or "", TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.Gotham, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, PG)
+                local pObj = {}
+                function pObj:Set(t, c)
+                    if t then CL.Text = t end
+                end
+                function pObj:Get() return CL.Text end
+                return pObj
+            end
+
+            function SO:CreateAccordion(cfg)
+                cfg = cfg or {}
+                local expanded = cfg.Default or false
+                local items = cfg.Items or {}
+
+                local AF = New("Frame", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, ClipsDescendants=true, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, AF)
+                local Head = New("TextButton", {Size=UDim2.new(1,0,0,36), BackgroundTransparency=1, Text="", ZIndex=5}, AF)
+                New("TextLabel", {Size=UDim2.new(1,-40,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=cfg.Title or "Accordion", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6}, Head)
+                local Arrow = New("TextLabel", {Size=UDim2.new(0,24,1,0), Position=UDim2.new(1,-30,0,0), BackgroundTransparency=1, Text=expanded and "▲" or "▼", TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.GothamBold, ZIndex=6}, Head)
+
+                local itemH = #items * 30
+                local IFrame = New("Frame", {Size=UDim2.new(1,-20,0,itemH), Position=UDim2.new(0,10,0,40), BackgroundTransparency=1, ZIndex=5}, AF)
+                New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,4)}, IFrame)
+                for _, item in ipairs(items) do
+                    local IB = New("TextButton", {Size=UDim2.new(1,0,0,26), BackgroundColor3=Theme.Background, Text=tostring(item.Title or item), TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=6}, IFrame)
+                    New("UICorner", {CornerRadius=UDim.new(0,4)}, IB)
+                    IB.MouseButton1Click:Connect(function() task.spawn(item.Callback or function() end) end)
+                    IB.MouseEnter:Connect(function() Tween(IB, {TextColor3=Theme.TextPrimary}, 0.1) end)
+                    IB.MouseLeave:Connect(function() Tween(IB, {TextColor3=Theme.TextSecondary}, 0.1) end)
+                end
+
+                local totalH = 36 + (expanded and itemH+10 or 0)
+                AF.Size = UDim2.new(1,0,0,totalH)
+
+                Head.MouseButton1Click:Connect(function()
+                    expanded = not expanded
+                    Arrow.Text = expanded and "▲" or "▼"
+                    Tween(AF, {Size=UDim2.new(1,0,0,expanded and 36+itemH+10 or 36)}, 0.25)
+                end)
+            end
+
+            function SO:CreateRadioGroup(cfg)
+                cfg = cfg or {}
+                local flag   = cfg.Flag
+                local cb     = cfg.Callback or function() end
+                local opts   = cfg.Options or {}
+                local val    = _saved(flag, cfg.Default or opts[1])
+
+                local RGF = New("Frame", {Size=UDim2.new(1,0,0,#opts*30+10), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, RGF)
+                New("UIPadding", {PaddingTop=UDim.new(0,5), PaddingLeft=UDim.new(0,10), PaddingRight=UDim.new(0,10), PaddingBottom=UDim.new(0,5)}, RGF)
+                New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)}, RGF)
+
+                if cfg.Title then
+                    New("TextLabel", {Size=UDim2.new(1,0,0,20), BackgroundTransparency=1, Text=cfg.Title, TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, RGF)
+                end
+
+                local dots = {}
+                local function selectOpt(o)
+                    val = o
+                    for opt, d in pairs(dots) do
+                        Tween(d.inner, {BackgroundTransparency=opt==val and 0 or 1}, 0.15)
+                        Tween(d.label, {TextColor3=opt==val and Theme.TextPrimary or Theme.TextSecondary}, 0.15)
+                    end
+                    if flag then _autoSave(flag, val) end
+                    task.spawn(cb, val)
+                end
+
+                for _, opt in ipairs(opts) do
+                    local row = New("Frame", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=1, ZIndex=5}, RGF)
+                    local outer = New("Frame", {Size=UDim2.new(0,16,0,16), Position=UDim2.new(0,0,0.5,-8), BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=6}, row)
+                    New("UICorner", {CornerRadius=UDim.new(0.5,0)}, outer)
+                    New("UIStroke", {Color=Theme.Accent, Thickness=1.5}, outer)
+                    local inner = New("Frame", {Size=UDim2.new(0,8,0,8), AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0), BackgroundColor3=Theme.Accent, BackgroundTransparency=opt==val and 0 or 1, BorderSizePixel=0, ZIndex=7}, outer)
+                    New("UICorner", {CornerRadius=UDim.new(0.5,0)}, inner)
+                    local label = New("TextLabel", {Size=UDim2.new(1,-26,1,0), Position=UDim2.new(0,24,0,0), BackgroundTransparency=1, Text=tostring(opt), TextColor3=opt==val and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6}, row)
+                    local hitBtn = New("TextButton", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="", ZIndex=8}, row)
+                    hitBtn.MouseButton1Click:Connect(function() selectOpt(opt) end)
+                    dots[opt] = {inner=inner, label=label}
+                end
+
+                local rObj = {}
+                function rObj:Set(v) selectOpt(v) end
+                function rObj:Get() return val end
+                if flag then NightLib.Flags[flag] = rObj end
+                return rObj
+            end
+
+            function SO:CreateSpinner(cfg)
+                cfg = cfg or {}
+                local flag   = cfg.Flag
+                local cb     = cfg.Callback or function() end
+                local opts   = cfg.Options or {}
+                local idx    = 1
+                local savedV = _saved(flag, cfg.Default or opts[1])
+                for i, v in ipairs(opts) do if v == savedV then idx = i break end end
+
+                local SpF = New("Frame", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=4, LayoutOrder=NO()}, SF)
+                New("UICorner", {CornerRadius=UDim.new(0,6)}, SpF)
+                New("TextLabel", {Size=UDim2.new(1,-130,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=cfg.Title or "Spinner", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, SpF)
+                local LB = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-124,0.5,-12), BackgroundColor3=Theme.Background, Text="‹", TextColor3=Theme.Accent, TextSize=16, Font=Enum.Font.GothamBold, ZIndex=5}, SpF)
+                New("UICorner", {CornerRadius=UDim.new(0,5)}, LB)
+                local VL = New("TextLabel", {Size=UDim2.new(0,60,0,24), Position=UDim2.new(1,-98,0.5,-12), BackgroundColor3=Theme.Background, BackgroundTransparency=0, Text=tostring(opts[idx] or ""), TextColor3=Theme.TextPrimary, TextSize=11, Font=Enum.Font.Gotham, ZIndex=5}, SpF)
+                New("UICorner", {CornerRadius=UDim.new(0,5)}, VL)
+                local RB = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-36,0.5,-12), BackgroundColor3=Theme.Background, Text="›", TextColor3=Theme.Accent, TextSize=16, Font=Enum.Font.GothamBold, ZIndex=5}, SpF)
+                New("UICorner", {CornerRadius=UDim.new(0,5)}, RB)
+
+                local function update()
+                    VL.Text = tostring(opts[idx] or "")
+                    if flag then _autoSave(flag, opts[idx]) end
+                    task.spawn(cb, opts[idx])
+                end
+                LB.MouseButton1Click:Connect(function() idx = idx > 1 and idx-1 or #opts; update() end)
+                RB.MouseButton1Click:Connect(function() idx = idx < #opts and idx+1 or 1; update() end)
+
+                local sObj = {}
+                function sObj:Set(v) for i, o in ipairs(opts) do if o==v then idx=i end end VL.Text=tostring(opts[idx] or "") end
+                function sObj:Get() return opts[idx] end
+                if flag then NightLib.Flags[flag] = sObj end
+                return sObj
             end
 
             function SO:Update(cfg)
