@@ -103,13 +103,18 @@ function NightLib:UpdateTheme(changes)
     for _, fn in ipairs(NightLib._themeUpdaters) do pcall(fn) end
 end
 
+local _saveTimers = {}
 local function _autoSave(flag, val)
     local p = NightLib._profile
     if not NightLib._configCache[p] then NightLib._configCache[p] = {} end
     if typeof(val) == "Color3" then
         NightLib._configCache[p][flag] = {__color3=true, r=val.R, g=val.G, b=val.B}
     else NightLib._configCache[p][flag] = val end
-    pcall(writefile, _filePath(p), HttpService:JSONEncode(NightLib._configCache[p]))
+    if _saveTimers[p] then task.cancel(_saveTimers[p]) end
+    _saveTimers[p] = task.delay(0.5, function()
+        pcall(writefile, _filePath(p), HttpService:JSONEncode(NightLib._configCache[p]))
+        _saveTimers[p] = nil
+    end)
 end
 
 local function _saved(flag, fallback)
@@ -244,31 +249,6 @@ local function New(class, props, parent)
     return obj
 end
 
-local function MakeDraggable(frame, handle)
-    handle = handle or frame
-    local dragging, dragStart, startPos
-    local conns = {}
-    conns[1] = handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; dragStart = i.Position; startPos = frame.Position
-        end
-    end)
-    conns[2] = handle.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
-    end)
-    conns[3] = UIS.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch) then
-            local d = i.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
-    end)
-    return conns
-end
-
 local Icons = {
     home="[]",  settings="*",   user="O",    star="*",    bell="!",    code=">_",
     map="@",    shield="#",     zap="!",     eye="O",     lock="#",    key="+",
@@ -284,7 +264,6 @@ local Icons = {
 }
 local function GetIcon(n) return Icons[n and n:lower()] or "*" end
 
--- Returns true if the string is a Roblox asset ID URL
 local function _isAssetId(s)
     return type(s) == "string" and (s:sub(1,13) == "rbxassetid://" or s:match("^%d+$"))
 end
@@ -525,7 +504,6 @@ function NightLib:CreateWindow(config)
         end
     end
 
-    -- ── Search overlay ──────────────────────────────────────────────────────
     local SearchOverlay = New("Frame", {
         Size=UDim2.new(0,340,0,420), Position=UDim2.new(0.5,-170,0.5,-210),
         BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=500,
@@ -586,7 +564,11 @@ function NightLib:CreateWindow(config)
         SrchNone.Visible = (count == 0)
     end
 
-    SrchBox:GetPropertyChangedSignal("Text"):Connect(function() _rebuildSearch(SrchBox.Text) end)
+    local _searchDebounce
+    SrchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        if _searchDebounce then task.cancel(_searchDebounce) end
+        _searchDebounce = task.delay(0.1, function() _rebuildSearch(SrchBox.Text) end)
+    end)
 
     local function _searchOverlayPos()
         local ap = MF.AbsolutePosition; local as = MF.AbsoluteSize
@@ -626,7 +608,6 @@ function NightLib:CreateWindow(config)
         if not gpe and i.KeyCode == Enum.KeyCode.Escape and _searchOpen then task.spawn(_closeSearch) end
     end)
 
-    -- ── Floating minimize icon ──────────────────────────────────────────────
     local MinIcon = New("Frame", {Size=UDim2.new(0,50,0,50), Position=UDim2.new(0,20,0.5,-25), BackgroundColor3=Theme.Background, BorderSizePixel=0, Visible=true, ZIndex=500}, SG)
     New("UICorner", {CornerRadius=UDim.new(0,13)}, MinIcon)
     local MinStroke = New("UIStroke", {Color=Theme.Accent, Thickness=1.5}, MinIcon)
@@ -718,7 +699,7 @@ function NightLib:CreateWindow(config)
     end
 
     local _updaters = {}
-    local function Reg(fn) table.insert(_updaters, fn); table.insert(NightLib._themeUpdaters, fn) end
+    local function Reg(fn) table.insert(_updaters, fn) end
 
     Reg(function()
         MF.BackgroundColor3=Theme.Background; TB.BackgroundColor3=Theme.Sidebar
@@ -750,13 +731,12 @@ function NightLib:CreateWindow(config)
     end
 
     function WO:GetStats()
-        local d = _loadStats()
         local sessionSecs = math.floor(tick() - _statsSession)
         return {
-            executions = d.executions or 1,
-            total_time = (d.total_time or 0) + sessionSecs,
-            first_run  = d.first_run or os.time(),
-            last_run   = d.last_run or os.time(),
+            executions = NightLib.Stats.executions,
+            total_time = (NightLib.Stats.total_time or 0) + sessionSecs,
+            first_run  = NightLib.Stats.first_run,
+            last_run   = NightLib.Stats.last_run,
             session    = sessionSecs,
         }
     end
@@ -860,7 +840,6 @@ function NightLib:CreateWindow(config)
         local TBtn = New("TextButton", {Size=UDim2.new(1,0,0,38), BackgroundColor3=Theme.PanelAlt, BackgroundTransparency=1, Text="", ZIndex=3}, SB)
         New("UICorner", {CornerRadius=UDim.new(0,8)}, TBtn)
 
-        -- ── Icon: supports both asset IDs and text symbols ──
         local isImageIcon = _isAssetId(cfg2.Icon)
         local IL
         if isImageIcon then
@@ -1019,7 +998,7 @@ function NightLib:CreateWindow(config)
                 end
                 local ILb = New("ImageLabel", {Size=UDim2.new(0,imgH,0,imgH), Position=UDim2.new(0.5,-imgH/2,0,yOff), BackgroundTransparency=1, Image=icfg.Image or "", ScaleType=Enum.ScaleType.Fit, ZIndex=5}, IFr)
                 if icfg.Circle then New("UICorner", {CornerRadius=UDim.new(0.5,0)}, ILb) end
-                local stroke = New("UIStroke", {Color=Theme.Accent, Thickness=2, ApplyStrokeMode=Enum.ApplyStrokeMode.Border}, ILb)
+                local stroke = New("UIStroke", {Color=Theme.Accent, Thickness=2}, ILb)
                 Reg(function() stroke.Color=Theme.Accent end)
                 local iObj = {}
                 function iObj:Set(img) ILb.Image = img end
@@ -1298,6 +1277,17 @@ function NightLib:CreateWindow(config)
                     end)
                 end
 
+                local _clickOutConn
+                local function _closeDropdown()
+                    open = false
+                    Tween(DDLScale, {Scale=0.92}, 0.15, Enum.EasingStyle.Quart)
+                    Tween(DDL, {BackgroundTransparency=0.3}, 0.12)
+                    task.wait(0.16); DDL.Visible = false
+                    DDL.BackgroundTransparency = 0
+                    if SearchBox then SearchBox.Text = "" end
+                    if _clickOutConn then _clickOutConn:Disconnect(); _clickOutConn = nil end
+                end
+
                 VBtn.MouseButton1Click:Connect(function()
                     open = not open
                     if open then
@@ -1309,29 +1299,22 @@ function NightLib:CreateWindow(config)
                         DDL.BackgroundTransparency = 0.3
                         Tween(DDLScale, {Scale=1}, 0.22, Enum.EasingStyle.Back)
                         Tween(DDL, {BackgroundTransparency=0}, 0.18, Enum.EasingStyle.Quart)
+                        DDL.Visible = true
                         if SearchBox then task.defer(function() SearchBox:CaptureFocus() end) end
+                        _clickOutConn = UIS.InputBegan:Connect(function(i)
+                            if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                            local mp = i.Position
+                            local ap = DDL.AbsolutePosition; local as = DDL.AbsoluteSize
+                            local vp = VBtn.AbsolutePosition; local vs = VBtn.AbsoluteSize
+                            local inDDL  = mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y
+                            local inVBtn = mp.X>=vp.X and mp.X<=vp.X+vs.X and mp.Y>=vp.Y and mp.Y<=vp.Y+vs.Y
+                            if not inDDL and not inVBtn then task.spawn(_closeDropdown) end
+                        end)
                     else
-                        Tween(DDLScale, {Scale=0.92}, 0.15, Enum.EasingStyle.Quart)
-                        Tween(DDL, {BackgroundTransparency=0.3}, 0.12)
-                        task.wait(0.16); DDL.Visible = false
-                        DDL.BackgroundTransparency = 0
+                        task.spawn(_closeDropdown)
                     end
-                    DDL.Visible = open
                 end)
 
-                UIS.InputBegan:Connect(function(i)
-                    if open and i.UserInputType == Enum.UserInputType.MouseButton1 then
-                        local mp = i.Position
-                        local ap = DDL.AbsolutePosition; local as = DDL.AbsoluteSize
-                        local vp = VBtn.AbsolutePosition; local vs = VBtn.AbsoluteSize
-                        local inDDL = mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y
-                        local inVBtn= mp.X>=vp.X and mp.X<=vp.X+vs.X and mp.Y>=vp.Y and mp.Y<=vp.Y+vs.Y
-                        if not inDDL and not inVBtn then
-                            open = false; DDL.Visible = false
-                            if SearchBox then SearchBox.Text = "" end
-                        end
-                    end
-                end)
                 _registerSearch(dcfg.Title or dcfg.Name, "list", function() Activate() end)
                 local dObj = {}
                 function dObj:Set(v)
@@ -1358,7 +1341,7 @@ function NightLib:CreateWindow(config)
                             if not multi then
                                 val = opt
                                 for o2, b2 in pairs(optBtns) do Tween(b2, {BackgroundTransparency=o2==opt and 0.7 or 1, TextColor3=o2==opt and Theme.TextPrimary or Theme.TextSecondary}, 0.1) end
-                                DDL.Visible = false; open = false
+                                task.spawn(_closeDropdown)
                                 if flag then _autoSave(flag, val) end
                                 task.spawn(cb, opt)
                                 updateDisplay()
