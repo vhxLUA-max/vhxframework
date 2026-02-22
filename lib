@@ -269,7 +269,6 @@ local function MakeDraggable(frame, handle)
     return conns
 end
 
--- Roblox-compatible icon set (GothamBold-safe subset + readable symbols)
 local Icons = {
     home="[]",  settings="*",   user="O",    star="*",    bell="!",    code=">_",
     map="@",    shield="#",     zap="!",     eye="O",     lock="#",    key="+",
@@ -280,9 +279,15 @@ local Icons = {
     info="i",   alert="!",      chart="#",   list="=",    grid="[]",   folder="[]",
     paint="*",  pin="*",        cursor=">",  fire="!",    crown="^",   diamond="<>",
     moon="O",   sun="*",        cloud="~",   close="X",   menu="=",    save="[]",
-    edit="E",   link="+",       share="<",   time="O",    tag="<>",
+    edit="E",   link="+",       share="<",   time="O",    tag="<>",    potion="!",
+    flask="!",  buy="$",        speed=">>",  optimize="O",
 }
 local function GetIcon(n) return Icons[n and n:lower()] or "*" end
+
+-- Returns true if the string is a Roblox asset ID URL
+local function _isAssetId(s)
+    return type(s) == "string" and (s:sub(1,13) == "rbxassetid://" or s:match("^%d+$"))
+end
 
 NightLib.AssetIcons = {
     logo = "rbxassetid://82863510537255",
@@ -397,7 +402,7 @@ function NightLib:CreateWindow(config)
     local idleAlpha    = config.IdleTransparency or 0.7
     local dynTrans     = config.DynamicTransparency ~= false and config.DynamicTransparency or false
     local baseBgAlpha  = config.Acrylic and 0.08 or 0
-    local _uiAlpha     = baseBgAlpha  -- mutable, updated by SetTransparency
+    local _uiAlpha     = baseBgAlpha
     local _hovering    = false
 
     if config.Profile then self:SetProfile(config.Profile) end
@@ -462,19 +467,16 @@ function NightLib:CreateWindow(config)
     local _streamerMode = false
     local _sensLabels   = {TitleLbl, SubLbl}
 
-    -- Close button
     local CB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-38,0.5,-14), BackgroundColor3=Color3.fromRGB(200,60,60), Text="X", TextColor3=Color3.new(1,1,1), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, CB)
     CB.MouseEnter:Connect(function() Tween(CB, {BackgroundColor3=Color3.fromRGB(240,70,70)}, 0.1) end)
     CB.MouseLeave:Connect(function() Tween(CB, {BackgroundColor3=Color3.fromRGB(200,60,60)}, 0.1) end)
 
-    -- Search button
     local SrchBtn = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-108,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="?", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, SrchBtn)
 
     local visible = true
 
-    -- ── Smooth animation helpers ──────────────────────────────────────────────
     local function _animHide()
         Tween(_mfScale, {Scale=_mfBaseScale*0.91}, 0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
         Tween(MF, {BackgroundTransparency=1}, 0.20, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -488,7 +490,6 @@ function NightLib:CreateWindow(config)
         MF.Visible = true
         _mfScale.Scale = _mfBaseScale * 0.82
         MF.BackgroundTransparency = 1
-        -- Spring bounce on scale, smooth fade-in
         Tween(_mfScale, {Scale=_mfBaseScale}, 0.44, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
         Tween(MF, {BackgroundTransparency=_uiAlpha}, 0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     end
@@ -506,7 +507,6 @@ function NightLib:CreateWindow(config)
         _statsActive = false
     end)
 
-    -- Dynamic transparency
     if dynTrans then
         MF.MouseEnter:Connect(function()
             _hovering = true
@@ -518,7 +518,6 @@ function NightLib:CreateWindow(config)
         end)
     end
 
-    -- Global search registry
     local _searchReg = {}
     local function _registerSearch(title, icon, activateFn)
         if title and title ~= "" then
@@ -526,7 +525,7 @@ function NightLib:CreateWindow(config)
         end
     end
 
-    -- ── Search overlay ────────────────────────────────────────────────────────
+    -- ── Search overlay ──────────────────────────────────────────────────────
     local SearchOverlay = New("Frame", {
         Size=UDim2.new(0,340,0,420), Position=UDim2.new(0.5,-170,0.5,-210),
         BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=500,
@@ -534,71 +533,27 @@ function NightLib:CreateWindow(config)
     New("UICorner", {CornerRadius=UDim.new(0,12)}, SearchOverlay)
     New("UIStroke", {Color=Theme.Accent, Thickness=1}, SearchOverlay)
 
-    -- Header bar with title and prominent X button
-    local SrchHeaderBar = New("Frame", {
-        Size=UDim2.new(1,0,0,46), BackgroundTransparency=1, ZIndex=501
-    }, SearchOverlay)
-    New("TextLabel", {
-        Size=UDim2.new(1,-56,1,0), Position=UDim2.new(0,16,0,0),
-        BackgroundTransparency=1, Text="Search",
-        TextColor3=Theme.TextPrimary, TextSize=14, Font=Enum.Font.GothamBold,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=502
-    }, SrchHeaderBar)
-    -- Prominent X / close button
-    local SrchExitBtn = New("TextButton", {
-        Size=UDim2.new(0,30,0,30), Position=UDim2.new(1,-40,0.5,-15),
-        BackgroundColor3=Color3.fromRGB(200,55,55), Text="X",
-        TextColor3=Color3.new(1,1,1), TextSize=12, Font=Enum.Font.GothamBold, ZIndex=503
-    }, SrchHeaderBar)
+    local SrchHeaderBar = New("Frame", {Size=UDim2.new(1,0,0,46), BackgroundTransparency=1, ZIndex=501}, SearchOverlay)
+    New("TextLabel", {Size=UDim2.new(1,-56,1,0), Position=UDim2.new(0,16,0,0), BackgroundTransparency=1, Text="Search", TextColor3=Theme.TextPrimary, TextSize=14, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=502}, SrchHeaderBar)
+    local SrchExitBtn = New("TextButton", {Size=UDim2.new(0,30,0,30), Position=UDim2.new(1,-40,0.5,-15), BackgroundColor3=Color3.fromRGB(200,55,55), Text="X", TextColor3=Color3.new(1,1,1), TextSize=12, Font=Enum.Font.GothamBold, ZIndex=503}, SrchHeaderBar)
     New("UICorner", {CornerRadius=UDim.new(0,8)}, SrchExitBtn)
     SrchExitBtn.MouseEnter:Connect(function() Tween(SrchExitBtn,{BackgroundColor3=Color3.fromRGB(240,65,65)},0.1) end)
     SrchExitBtn.MouseLeave:Connect(function() Tween(SrchExitBtn,{BackgroundColor3=Color3.fromRGB(200,55,55)},0.1) end)
 
-    -- Divider under header
-    New("Frame", {
-        Size=UDim2.new(1,-24,0,1), Position=UDim2.new(0,12,0,46),
-        BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=501
-    }, SearchOverlay)
+    New("Frame", {Size=UDim2.new(1,-24,0,1), Position=UDim2.new(0,12,0,46), BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=501}, SearchOverlay)
 
-    -- Search input field
-    local SrchInputF = New("Frame", {
-        Size=UDim2.new(1,-16,0,36), Position=UDim2.new(0,8,0,54),
-        BackgroundColor3=Theme.Background, BorderSizePixel=0, ZIndex=501
-    }, SearchOverlay)
+    local SrchInputF = New("Frame", {Size=UDim2.new(1,-16,0,36), Position=UDim2.new(0,8,0,54), BackgroundColor3=Theme.Background, BorderSizePixel=0, ZIndex=501}, SearchOverlay)
     New("UICorner", {CornerRadius=UDim.new(0,8)}, SrchInputF)
     New("UIStroke", {Color=Theme.Divider, Thickness=1}, SrchInputF)
+    New("TextLabel", {Size=UDim2.new(0,22,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text="?", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=502}, SrchInputF)
+    local SrchBox = New("TextBox", {Size=UDim2.new(1,-44,0,24), Position=UDim2.new(0,34,0.5,-12), BackgroundTransparency=1, Text="", PlaceholderText="Search elements...", TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary, TextSize=13, Font=Enum.Font.Gotham, ZIndex=502, ClearTextOnFocus=false}, SrchInputF)
 
-    New("TextLabel", {
-        Size=UDim2.new(0,22,1,0), Position=UDim2.new(0,10,0,0),
-        BackgroundTransparency=1, Text="?",
-        TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=502
-    }, SrchInputF)
-    local SrchBox = New("TextBox", {
-        Size=UDim2.new(1,-44,0,24), Position=UDim2.new(0,34,0.5,-12),
-        BackgroundTransparency=1, Text="", PlaceholderText="Search elements...",
-        TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary,
-        TextSize=13, Font=Enum.Font.Gotham, ZIndex=502, ClearTextOnFocus=false
-    }, SrchInputF)
-
-    -- Results list
-    local SrchList = New("ScrollingFrame", {
-        Size=UDim2.new(1,-16,1,-104), Position=UDim2.new(0,8,0,100),
-        BackgroundTransparency=1, ScrollBarThickness=3, ScrollBarImageColor3=Theme.Accent,
-        CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ZIndex=501,
-    }, SearchOverlay)
+    local SrchList = New("ScrollingFrame", {Size=UDim2.new(1,-16,1,-104), Position=UDim2.new(0,8,0,100), BackgroundTransparency=1, ScrollBarThickness=3, ScrollBarImageColor3=Theme.Accent, CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ZIndex=501}, SearchOverlay)
     New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,4)}, SrchList)
     New("UIPadding", {PaddingTop=UDim.new(0,4), PaddingBottom=UDim.new(0,4)}, SrchList)
 
-    local SrchHint = New("TextLabel", {
-        Size=UDim2.new(1,0,0,50), BackgroundTransparency=1,
-        Text="Type to search elements...", TextColor3=Theme.TextSecondary,
-        TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=true
-    }, SrchList)
-    local SrchNone = New("TextLabel", {
-        Size=UDim2.new(1,0,0,40), BackgroundTransparency=1,
-        Text="No results found", TextColor3=Theme.TextSecondary,
-        TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=false
-    }, SrchList)
+    local SrchHint = New("TextLabel", {Size=UDim2.new(1,0,0,50), BackgroundTransparency=1, Text="Type to search elements...", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=true}, SrchList)
+    local SrchNone = New("TextLabel", {Size=UDim2.new(1,0,0,40), BackgroundTransparency=1, Text="No results found", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=false}, SrchList)
 
     local _srchItems = {}
     local _searchOpen = false
@@ -607,9 +562,7 @@ function NightLib:CreateWindow(config)
         for _, item in ipairs(_srchItems) do item:Destroy() end
         _srchItems = {}
         local q = query:lower()
-        if q == "" then
-            SrchHint.Visible = true; SrchNone.Visible = false; return
-        end
+        if q == "" then SrchHint.Visible = true; SrchNone.Visible = false; return end
         SrchHint.Visible = false
         local count = 0
         for i, entry in ipairs(_searchReg) do
@@ -633,9 +586,7 @@ function NightLib:CreateWindow(config)
         SrchNone.Visible = (count == 0)
     end
 
-    SrchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        _rebuildSearch(SrchBox.Text)
-    end)
+    SrchBox:GetPropertyChangedSignal("Text"):Connect(function() _rebuildSearch(SrchBox.Text) end)
 
     local function _searchOverlayPos()
         local ap = MF.AbsolutePosition; local as = MF.AbsoluteSize
@@ -672,24 +623,15 @@ function NightLib:CreateWindow(config)
     SrchExitBtn.MouseButton1Click:Connect(function() task.spawn(_closeSearch) end)
 
     UIS.InputBegan:Connect(function(i, gpe)
-        if not gpe and i.KeyCode == Enum.KeyCode.Escape and _searchOpen then
-            task.spawn(_closeSearch)
-        end
+        if not gpe and i.KeyCode == Enum.KeyCode.Escape and _searchOpen then task.spawn(_closeSearch) end
     end)
 
-    -- ── Floating minimize icon ────────────────────────────────────────────────
-    local MinIcon = New("Frame", {
-        Size=UDim2.new(0,50,0,50), Position=UDim2.new(0,20,0.5,-25),
-        BackgroundColor3=Theme.Background, BorderSizePixel=0, Visible=true, ZIndex=500,
-    }, SG)
+    -- ── Floating minimize icon ──────────────────────────────────────────────
+    local MinIcon = New("Frame", {Size=UDim2.new(0,50,0,50), Position=UDim2.new(0,20,0.5,-25), BackgroundColor3=Theme.Background, BorderSizePixel=0, Visible=true, ZIndex=500}, SG)
     New("UICorner", {CornerRadius=UDim.new(0,13)}, MinIcon)
     local MinStroke = New("UIStroke", {Color=Theme.Accent, Thickness=1.5}, MinIcon)
     local MinIconScale = New("UIScale", {Scale=1}, MinIcon)
-    New("ImageLabel", {
-        Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4),
-        BackgroundTransparency=1, Image=NightLib.AssetIcons.logo,
-        ScaleType=Enum.ScaleType.Fit, ZIndex=501,
-    }, MinIcon)
+    New("ImageLabel", {Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4), BackgroundTransparency=1, Image=NightLib.AssetIcons.logo, ScaleType=Enum.ScaleType.Fit, ZIndex=501}, MinIcon)
 
     do
         local dragging = false
@@ -699,27 +641,22 @@ function NightLib:CreateWindow(config)
         local moveConn
 
         MinIcon.InputBegan:Connect(function(i)
-            if i.UserInputType ~= Enum.UserInputType.MouseButton1
-            and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
             dragging = true
             dragStartPos = Vector2.new(i.Position.X, i.Position.Y)
             frameStartPos = MinIcon.Position
             Tween(MinIconScale, {Scale=0.88}, 0.12, Enum.EasingStyle.Quint)
             moveConn = UIS.InputChanged:Connect(function(inp)
                 if not dragging then return end
-                if inp.UserInputType ~= Enum.UserInputType.MouseMovement
-                and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+                if inp.UserInputType ~= Enum.UserInputType.MouseMovement and inp.UserInputType ~= Enum.UserInputType.Touch then return end
                 local d = Vector2.new(inp.Position.X - dragStartPos.X, inp.Position.Y - dragStartPos.Y)
-                MinIcon.Position = UDim2.new(
-                    frameStartPos.X.Scale, frameStartPos.X.Offset + d.X,
-                    frameStartPos.Y.Scale, frameStartPos.Y.Offset + d.Y)
+                MinIcon.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + d.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + d.Y)
             end)
         end)
 
         MinIcon.InputEnded:Connect(function(i)
             if not dragging then return end
-            if i.UserInputType ~= Enum.UserInputType.MouseButton1
-            and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
             local dist = Vector2.new(i.Position.X - dragStartPos.X, i.Position.Y - dragStartPos.Y).Magnitude
             dragging = false
             Tween(MinIconScale, {Scale=1}, 0.22, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
@@ -727,40 +664,29 @@ function NightLib:CreateWindow(config)
             if dist <= TAP_THRESHOLD then _setVisible(not visible) end
         end)
 
-        MinIcon.MouseEnter:Connect(function()
-            if not dragging then Tween(MinIconScale, {Scale=1.1}, 0.18, Enum.EasingStyle.Back) end
-        end)
-        MinIcon.MouseLeave:Connect(function()
-            if not dragging then Tween(MinIconScale, {Scale=1}, 0.16, Enum.EasingStyle.Quint) end
-        end)
+        MinIcon.MouseEnter:Connect(function() if not dragging then Tween(MinIconScale, {Scale=1.1}, 0.18, Enum.EasingStyle.Back) end end)
+        MinIcon.MouseLeave:Connect(function() if not dragging then Tween(MinIconScale, {Scale=1}, 0.16, Enum.EasingStyle.Quint) end end)
     end
 
     local MinB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-72,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="-", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, MinB)
     MinB.MouseButton1Click:Connect(function() _setVisible(not visible) end)
 
-    -- Inline drag for MF so SearchOverlay follows
     do
         local dragging, dragStart, startPos
         TB.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1
-            or i.UserInputType == Enum.UserInputType.Touch then
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
                 dragging=true; dragStart=i.Position; startPos=MF.Position
             end
         end)
         TB.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1
-            or i.UserInputType == Enum.UserInputType.Touch then dragging=false end
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging=false end
         end)
         UIS.InputChanged:Connect(function(i)
-            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
-            or i.UserInputType == Enum.UserInputType.Touch) then
+            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
                 local d = i.Position - dragStart
-                MF.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X,
-                    startPos.Y.Scale, startPos.Y.Offset+d.Y)
-                if _searchOpen then
-                    SearchOverlay.Position = _searchOverlayPos()
-                end
+                MF.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X, startPos.Y.Scale, startPos.Y.Offset+d.Y)
+                if _searchOpen then SearchOverlay.Position = _searchOverlayPos() end
             end
         end)
     end
@@ -772,14 +698,8 @@ function NightLib:CreateWindow(config)
 
     local CA = New("Frame", {Size=UDim2.new(1,-55,1,-48), Position=UDim2.new(0,55,0,48), BackgroundTransparency=1, BorderSizePixel=0, ZIndex=2, ClipsDescendants=true}, MF)
 
-    local NC = New("Frame", {
-        Size=UDim2.new(0,270,0,400), Position=UDim2.new(1,-278,1,-410),
-        BackgroundTransparency=1, ZIndex=600,
-    }, SG)
-    New("UIListLayout", {
-        FillDirection=Enum.FillDirection.Vertical, VerticalAlignment=Enum.VerticalAlignment.Bottom,
-        SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,6),
-    }, NC)
+    local NC = New("Frame", {Size=UDim2.new(0,270,0,400), Position=UDim2.new(1,-278,1,-410), BackgroundTransparency=1, ZIndex=600}, SG)
+    New("UIListLayout", {FillDirection=Enum.FillDirection.Vertical, VerticalAlignment=Enum.VerticalAlignment.Bottom, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,6)}, NC)
     New("UIPadding", {PaddingBottom=UDim.new(0,10), PaddingRight=UDim.new(0,8)}, NC)
 
     local _blurEffect = nil
@@ -841,19 +761,13 @@ function NightLib:CreateWindow(config)
         }
     end
 
-    -- ── Transparency API ──────────────────────────────────────────────────────
     function WO:SetTransparency(v)
         _uiAlpha = math.clamp(v, 0, 0.95)
         baseBgAlpha = _uiAlpha
-        if visible then
-            Tween(MF, {BackgroundTransparency=_uiAlpha}, 0.18, Enum.EasingStyle.Quart)
-        end
+        if visible then Tween(MF, {BackgroundTransparency=_uiAlpha}, 0.18, Enum.EasingStyle.Quart) end
     end
 
-    function WO:GetTransparency()
-        return _uiAlpha
-    end
-
+    function WO:GetTransparency() return _uiAlpha end
     function WO:SetVisible(s) _setVisible(s) end
     function WO:GetVisible() return visible end
     function WO:IsVisible() return visible end
@@ -886,7 +800,6 @@ function NightLib:CreateWindow(config)
         local hasActions = cfg2.Actions and next(cfg2.Actions)
         local N = New("Frame", {Size=UDim2.new(1,0,0,hasActions and 86 or 64), BackgroundColor3=cfg2.Color or Theme.NotifyBg, BorderSizePixel=0, BackgroundTransparency=1, ZIndex=601}, NC)
         New("UICorner", {CornerRadius=UDim.new(0,8)}, N)
-        -- Entrance animation
         local _ns = New("UIScale", {Scale=0.88}, N)
         Tween(_ns, {Scale=1}, 0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         local xOff = 12
@@ -943,9 +856,33 @@ function NightLib:CreateWindow(config)
         if type(cfg2) == "string" then cfg2 = {Title=cfg2, Icon=type(iconId)=="string" and iconId or nil} end
         cfg2 = cfg2 or {}
         local tabTitle = cfg2.Title or "Tab"
+
         local TBtn = New("TextButton", {Size=UDim2.new(1,0,0,38), BackgroundColor3=Theme.PanelAlt, BackgroundTransparency=1, Text="", ZIndex=3}, SB)
         New("UICorner", {CornerRadius=UDim.new(0,8)}, TBtn)
-        local IL = New("TextLabel", {Size=UDim2.new(1,0,0,20), Position=UDim2.new(0,0,0,6), BackgroundTransparency=1, Text=GetIcon(cfg2.Icon or "layers"), TextColor3=Theme.TextSecondary, TextSize=16, Font=Enum.Font.GothamBold, ZIndex=4}, TBtn)
+
+        -- ── Icon: supports both asset IDs and text symbols ──
+        local isImageIcon = _isAssetId(cfg2.Icon)
+        local IL
+        if isImageIcon then
+            IL = New("ImageLabel", {
+                Size=UDim2.new(0,20,0,20),
+                Position=UDim2.new(0.5,-10,0,6),
+                BackgroundTransparency=1,
+                Image=cfg2.Icon,
+                ImageColor3=Theme.TextSecondary,
+                ScaleType=Enum.ScaleType.Fit,
+                ZIndex=4,
+            }, TBtn)
+        else
+            IL = New("TextLabel", {
+                Size=UDim2.new(1,0,0,20), Position=UDim2.new(0,0,0,6),
+                BackgroundTransparency=1,
+                Text=GetIcon(cfg2.Icon or "layers"),
+                TextColor3=Theme.TextSecondary,
+                TextSize=16, Font=Enum.Font.GothamBold, ZIndex=4,
+            }, TBtn)
+        end
+
         local TL = New("TextLabel", {Size=UDim2.new(1,0,0,12), Position=UDim2.new(0,0,0,26), BackgroundTransparency=1, Text=tabTitle:sub(1,5), TextColor3=Theme.TextSecondary, TextSize=9, Font=Enum.Font.Gotham, ZIndex=4}, TBtn)
         local AD = New("Frame", {Size=UDim2.new(0,3,0,28), Position=UDim2.new(0,-7,0.5,-14), BackgroundColor3=Theme.Accent, BackgroundTransparency=1, BorderSizePixel=0, ZIndex=4}, TBtn)
         New("UICorner", {CornerRadius=UDim.new(0,2)}, AD)
@@ -958,9 +895,15 @@ function NightLib:CreateWindow(config)
         New("UIPadding", {PaddingTop=UDim.new(0,10), PaddingLeft=UDim.new(0,10), PaddingRight=UDim.new(0,10), PaddingBottom=UDim.new(0,10)}, TF)
         New("UIListLayout", {FillDirection=Enum.FillDirection.Vertical, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,8)}, TF)
 
+        local function _setIconColor(col)
+            if isImageIcon then IL.ImageColor3 = col
+            else IL.TextColor3 = col end
+        end
+
         Reg(function()
-            IL.TextColor3 = TF.Visible and Theme.Accent or Theme.TextSecondary
-            TL.TextColor3 = TF.Visible and Theme.Accent or Theme.TextSecondary
+            local active = TF.Visible
+            _setIconColor(active and Theme.Accent or Theme.TextSecondary)
+            TL.TextColor3  = active and Theme.Accent or Theme.TextSecondary
             AD.BackgroundColor3 = Theme.Accent
         end)
 
@@ -968,21 +911,30 @@ function NightLib:CreateWindow(config)
             for _, t in pairs(WO.Tabs) do
                 if t.Frame.Visible then
                     t.Frame.Visible = false
-                    Tween(t.BI, {TextColor3=Theme.TextSecondary}, 0.18)
+                    if t.isImage then
+                        Tween(t.BI, {ImageColor3=Theme.TextSecondary}, 0.18)
+                    else
+                        Tween(t.BI, {TextColor3=Theme.TextSecondary}, 0.18)
+                    end
                     Tween(t.BA, {BackgroundTransparency=1}, 0.18)
                     t.Btn.BackgroundTransparency = 1
                 end
             end
             TF.Visible = true
-            Tween(IL, {TextColor3=Theme.Accent}, 0.22, Enum.EasingStyle.Quart)
+            if isImageIcon then
+                Tween(IL, {ImageColor3=Theme.Accent}, 0.22, Enum.EasingStyle.Quart)
+            else
+                Tween(IL, {TextColor3=Theme.Accent}, 0.22, Enum.EasingStyle.Quart)
+            end
             Tween(TL, {TextColor3=Theme.Accent}, 0.22, Enum.EasingStyle.Quart)
             Tween(AD, {BackgroundTransparency=0}, 0.22, Enum.EasingStyle.Quart)
             TBtn.BackgroundTransparency = 0.85
         end
+
         TBtn.MouseButton1Click:Connect(Activate)
         TBtn.MouseEnter:Connect(function() if not TF.Visible then Tween(TBtn, {BackgroundTransparency=0.9}, 0.12) end end)
         TBtn.MouseLeave:Connect(function() if not TF.Visible then Tween(TBtn, {BackgroundTransparency=1}, 0.12) end end)
-        table.insert(WO.Tabs, {Frame=TF, Btn=TBtn, BI=IL, BA=AD})
+        table.insert(WO.Tabs, {Frame=TF, Btn=TBtn, BI=IL, BA=AD, isImage=isImageIcon})
         if #WO.Tabs == 1 then Activate() end
 
         local TO = {}
@@ -1200,19 +1152,10 @@ function NightLib:CreateWindow(config)
 
                 local function OpenTypeInput()
                     if SlFr:FindFirstChild("__typeOverlay") then return end
-                    local ov = New("Frame", {
-                        Name="__typeOverlay", Size=UDim2.new(0,90,0,28),
-                        Position=UDim2.new(0.5,-45,0,6), BackgroundColor3=Theme.Panel,
-                        BorderSizePixel=0, ZIndex=20,
-                    }, SlFr)
+                    local ov = New("Frame", {Name="__typeOverlay", Size=UDim2.new(0,90,0,28), Position=UDim2.new(0.5,-45,0,6), BackgroundColor3=Theme.Panel, BorderSizePixel=0, ZIndex=20}, SlFr)
                     New("UICorner", {CornerRadius=UDim.new(0,6)}, ov)
                     New("UIStroke", {Color=Theme.Accent, Thickness=1}, ov)
-                    local tb2 = New("TextBox", {
-                        Size=UDim2.new(1,-16,1,-4), Position=UDim2.new(0,8,0,2),
-                        BackgroundTransparency=1, Text=tostring(val),
-                        TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold,
-                        ZIndex=21, ClearTextOnFocus=false,
-                    }, ov)
+                    local tb2 = New("TextBox", {Size=UDim2.new(1,-16,1,-4), Position=UDim2.new(0,8,0,2), BackgroundTransparency=1, Text=tostring(val), TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, ZIndex=21, ClearTextOnFocus=false}, ov)
                     tb2:CaptureFocus()
                     tb2.FocusLost:Connect(function()
                         local n = tonumber(tb2.Text)
@@ -1285,12 +1228,7 @@ function NightLib:CreateWindow(config)
                 local useSearch = #opts >= SEARCH_THRESH
                 local searchBarH = useSearch and 30 or 0
                 local maxVis = math.min(#opts, 5)
-                local DDL = New("Frame", {
-                    Size=UDim2.new(0,110,0,maxVis*28+6+searchBarH),
-                    Position=UDim2.new(0,0,0,0),
-                    BackgroundColor3=Theme.Panel, BorderSizePixel=0,
-                    Visible=false, ZIndex=100, ClipsDescendants=true,
-                }, SG)
+                local DDL = New("Frame", {Size=UDim2.new(0,110,0,maxVis*28+6+searchBarH), Position=UDim2.new(0,0,0,0), BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=100, ClipsDescendants=true}, SG)
                 New("UICorner", {CornerRadius=UDim.new(0,6)}, DDL)
                 New("UIStroke", {Color=Theme.Divider, Thickness=1}, DDL)
                 Reg(function() DDL.BackgroundColor3=Theme.Panel end)
@@ -1300,21 +1238,12 @@ function NightLib:CreateWindow(config)
                 local SearchBox = nil
                 if useSearch then
                     local SBFr = New("Frame", {Size=UDim2.new(1,0,0,searchBarH), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=21}, DDL)
-                    SearchBox = New("TextBox", {
-                        Size=UDim2.new(1,-20,0,20), Position=UDim2.new(0,10,0,5),
-                        BackgroundTransparency=1, Text="", PlaceholderText="Search...",
-                        TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary,
-                        TextSize=11, Font=Enum.Font.Gotham, ZIndex=22, ClearTextOnFocus=false,
-                    }, SBFr)
+                    SearchBox = New("TextBox", {Size=UDim2.new(1,-20,0,20), Position=UDim2.new(0,10,0,5), BackgroundTransparency=1, Text="", PlaceholderText="Search...", TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.Gotham, ZIndex=22, ClearTextOnFocus=false}, SBFr)
                     New("Frame", {Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Theme.Divider, ZIndex=22}, SBFr)
                     Reg(function() SBFr.BackgroundColor3=Theme.PanelAlt; SearchBox.TextColor3=Theme.TextPrimary; SearchBox.PlaceholderColor3=Theme.TextSecondary end)
                 end
 
-                local DDS = New("ScrollingFrame", {
-                    Size=UDim2.new(1,0,1,-searchBarH), Position=UDim2.new(0,0,0,searchBarH),
-                    BackgroundTransparency=1, ScrollBarThickness=2, ZIndex=21,
-                    CanvasSize=UDim2.new(0,0,0,#opts*28),
-                }, DDL)
+                local DDS = New("ScrollingFrame", {Size=UDim2.new(1,0,1,-searchBarH), Position=UDim2.new(0,0,0,searchBarH), BackgroundTransparency=1, ScrollBarThickness=2, ZIndex=21, CanvasSize=UDim2.new(0,0,0,#opts*28)}, DDL)
                 New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,0)}, DDS)
                 New("UIPadding", {PaddingTop=UDim.new(0,3), PaddingBottom=UDim.new(0,3)}, DDS)
 
@@ -1387,8 +1316,6 @@ function NightLib:CreateWindow(config)
                         task.wait(0.16); DDL.Visible = false
                         DDL.BackgroundTransparency = 0
                     end
-                    DDL.Visible = open or DDL.Visible
-                    if not open then DDL.Visible = false end
                     DDL.Visible = open
                 end)
 
