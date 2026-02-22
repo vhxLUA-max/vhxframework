@@ -540,26 +540,35 @@ function NightLib:CreateWindow(config)
     New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,4)}, SrchList)
     New("UIPadding", {PaddingTop=UDim.new(0,4), PaddingBottom=UDim.new(0,4)}, SrchList)
 
+    local SrchHint = New("TextLabel", {Size=UDim2.new(1,0,0,50), BackgroundTransparency=1, Text="Start typing to search...", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=true}, SrchList)
     local SrchNone = New("TextLabel", {Size=UDim2.new(1,0,0,40), BackgroundTransparency=1, Text="No results found", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=false}, SrchList)
 
     local _srchItems = {}
+    local _searchOpen = false
+
     local function _rebuildSearch(query)
         for _, item in ipairs(_srchItems) do item:Destroy() end
         _srchItems = {}
         local q = query:lower()
+        if q == "" then
+            SrchHint.Visible = true; SrchNone.Visible = false; return
+        end
+        SrchHint.Visible = false
         local count = 0
         for i, entry in ipairs(_searchReg) do
-            if q == "" or entry.title:lower():find(q, 1, true) then
+            if entry.title:lower():find(q, 1, true) then
                 local R = New("TextButton", {Size=UDim2.new(1,0,0,34), BackgroundColor3=Theme.PanelAlt, Text="", ZIndex=502, LayoutOrder=i}, SrchList)
                 New("UICorner", {CornerRadius=UDim.new(0,6)}, R)
                 New("TextLabel", {Size=UDim2.new(0,24,1,0), Position=UDim2.new(0,8,0,0), BackgroundTransparency=1, Text=GetIcon(entry.icon), TextColor3=Theme.Accent, TextSize=13, Font=Enum.Font.GothamBold, ZIndex=503}, R)
-                New("TextLabel", {Size=UDim2.new(1,-40,1,0), Position=UDim2.new(0,32,0,0), BackgroundTransparency=1, Text=entry.title, TextColor3=Theme.TextPrimary, TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
+                -- highlight matched portion in title
+                local dispTitle = entry.title
+                New("TextLabel", {Size=UDim2.new(1,-40,1,0), Position=UDim2.new(0,32,0,0), BackgroundTransparency=1, Text=dispTitle, TextColor3=Theme.TextPrimary, TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
+                local qlbl = New("TextLabel", {Size=UDim2.new(1,-40,0,14), Position=UDim2.new(0,32,1,-16), BackgroundTransparency=1, Text='matching "'..query..'"', TextColor3=Theme.Accent, TextSize=9, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
                 R.MouseEnter:Connect(function() Tween(R, {BackgroundColor3=Theme.Divider}, 0.1) end)
                 R.MouseLeave:Connect(function() Tween(R, {BackgroundColor3=Theme.PanelAlt}, 0.1) end)
                 local fn = entry.fn
                 R.MouseButton1Click:Connect(function()
-                    SearchOverlay.Visible = false
-                    SrchBox.Text = ""
+                    _searchOpen = false; SearchOverlay.Visible = false; SrchBox.Text = ""
                     if fn then task.spawn(fn) end
                 end)
                 table.insert(_srchItems, R)
@@ -573,8 +582,16 @@ function NightLib:CreateWindow(config)
         _rebuildSearch(SrchBox.Text)
     end)
 
+    local function _searchOverlayPos()
+        local ap = MF.AbsolutePosition; local as = MF.AbsoluteSize
+        return UDim2.new(0, ap.X + as.X/2 - 170, 0, ap.Y + as.Y/2 - 200)
+    end
+
     local function _openSearch()
+        if _searchOpen then return end
+        _searchOpen = true
         _rebuildSearch("")
+        SearchOverlay.Position = _searchOverlayPos()
         SearchOverlay.Visible = true
         SearchOverlay.Size = UDim2.new(0,340,0,40)
         SearchOverlay.BackgroundTransparency = 1
@@ -583,6 +600,8 @@ function NightLib:CreateWindow(config)
     end
 
     local function _closeSearch()
+        if not _searchOpen then return end
+        _searchOpen = false
         Tween(SearchOverlay, {Size=UDim2.new(0,340,0,40), BackgroundTransparency=1}, 0.2, Enum.EasingStyle.Quart)
         task.wait(0.22)
         SearchOverlay.Visible = false
@@ -590,11 +609,11 @@ function NightLib:CreateWindow(config)
     end
 
     SrchBtn.MouseButton1Click:Connect(_openSearch)
-    SrchCloseBtn.MouseButton1Click:Connect(_closeSearch)
+    SrchCloseBtn.MouseButton1Click:Connect(function() task.spawn(_closeSearch) end)
 
     UIS.InputBegan:Connect(function(i, gpe)
-        if not gpe and i.KeyCode == Enum.KeyCode.Escape and SearchOverlay.Visible then
-            _closeSearch()
+        if not gpe and i.KeyCode == Enum.KeyCode.Escape and _searchOpen then
+            task.spawn(_closeSearch)
         end
     end)
 
@@ -660,7 +679,31 @@ function NightLib:CreateWindow(config)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, MinB)
     MinB.MouseButton1Click:Connect(function() _setVisible(not visible) end)
 
-    MakeDraggable(MF, TB)
+    -- Inline drag for MF so SearchOverlay follows
+    do
+        local dragging, dragStart, startPos
+        TB.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+                dragging=true; dragStart=i.Position; startPos=MF.Position
+            end
+        end)
+        TB.InputEnded:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then dragging=false end
+        end)
+        UIS.InputChanged:Connect(function(i)
+            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
+            or i.UserInputType == Enum.UserInputType.Touch) then
+                local d = i.Position - dragStart
+                MF.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X,
+                    startPos.Y.Scale, startPos.Y.Offset+d.Y)
+                if _searchOpen then
+                    SearchOverlay.Position = _searchOverlayPos()
+                end
+            end
+        end)
+    end
 
     local SB = New("Frame", {Size=UDim2.new(0,54,1,-48), Position=UDim2.new(0,0,0,48), BackgroundColor3=Theme.Sidebar, BorderSizePixel=0, ZIndex=2}, MF)
     New("UIListLayout", {FillDirection=Enum.FillDirection.Vertical, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,4)}, SB)
