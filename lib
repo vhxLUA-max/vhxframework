@@ -13,7 +13,6 @@ NightLib._configCache    = {}
 NightLib._profile        = "Default"
 NightLib._themeUpdaters  = {}
 NightLib._currentTheme   = nil
-NightLib._streamSensitive = {}
 
 local function _filePath(p) return "NightLib_"..(p or NightLib._profile)..".json" end
 
@@ -160,15 +159,18 @@ local function MakeDraggable(frame, handle)
     handle = handle or frame
     local dragging, dragStart, startPos
     handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
             dragging = true; dragStart = i.Position; startPos = frame.Position
         end
     end)
     handle.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
     end)
     UIS.InputChanged:Connect(function(i)
-        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
+        or i.UserInputType == Enum.UserInputType.Touch) then
             local d = i.Position - dragStart
             frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
                 startPos.Y.Scale, startPos.Y.Offset + d.Y)
@@ -176,14 +178,18 @@ local function MakeDraggable(frame, handle)
     end)
 end
 
+-- Only Roblox-compatible Unicode symbols (no emojis)
 local Icons = {
-    home="⌂",settings="⚙",user="👤",star="★",bell="🔔",code="</>",map="◉",shield="◈",zap="⚡",
-    eye="◎",lock="🔒",key="🔑",trash="🗑",copy="⎘",download="↓",upload="↑",search="⌕",plus="+",
-    minus="−",check="✓",x="✕",arrow_right="→",arrow_left="←",refresh="↻",wifi="◌",globe="◉",
-    server="▣",cpu="⬚",database="⬡",layers="⬜",terminal=">_",sword="⚔",gamepad="🎮",flag="⚑",
-    heart="♥",info="ℹ",alert="⚠",chart="📊",list="☰",grid="⊞",folder="📁",paint="🎨",
-    pin="📌",cursor="◈",fire="🔥",crown="♛",diamond="◆",moon="☽",sun="☀",cloud="☁",
-    close="✕",menu="≡",save="💾",edit="✎",link="🔗",share="⎙",time="◷",tag="◇",
+    home="⌂",  settings="⚙",  user="◯",   star="★",    bell="◬",    code=">_",
+    map="◉",   shield="◈",    zap="⚡",    eye="◎",     lock="◈",    key="⊕",
+    trash="⊠", copy="⊟",     download="↓",upload="↑",  search="⌕",  plus="+",
+    minus="-", check="✓",     x="✕",       arrow_right="→",arrow_left="←",
+    refresh="↻",wifi="◌",    globe="◉",   server="▣",  cpu="⬚",     database="⬡",
+    layers="⬜",terminal=">_",sword="⚔",  gamepad="⊞", flag="⚑",    heart="♥",
+    info="ℹ",  alert="⚠",    chart="▦",   list="☰",    grid="⊞",    folder="▤",
+    paint="◍", pin="◆",       cursor="◈",  fire="⚡",   crown="♕",   diamond="◆",
+    moon="☽",  sun="☀",       cloud="☁",   close="✕",   menu="≡",    save="▦",
+    edit="✎",  link="⊕",      share="⊏",   time="◷",    tag="◇",
 }
 local function GetIcon(n) return Icons[n and n:lower()] or "●" end
 
@@ -358,13 +364,46 @@ function NightLib:CreateWindow(config)
         Tween(MF, {Position=UDim2.new(0.5,-340,1.2,0)}, 0.3); task.wait(0.35); SG:Destroy()
     end)
 
-    local MinB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-72,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="–", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
-    New("UICorner", {CornerRadius=UDim.new(0,6)}, MinB)
+    -- Minimized floating icon (screen-level, draggable)
+    local MinIcon = New("Frame", {
+        Size=UDim2.new(0,46,0,46),
+        Position=UDim2.new(0,20,0.5,-23),
+        BackgroundColor3=Theme.Accent,
+        BorderSizePixel=0, Visible=false, ZIndex=500,
+    }, SG)
+    New("UICorner", {CornerRadius=UDim.new(0,12)}, MinIcon)
+    New("UIStroke", {Color=Theme.Divider, Thickness=1.5}, MinIcon)
+    New("TextLabel", {
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Text="◑", TextColor3=Color3.new(1,1,1),
+        TextSize=22, Font=Enum.Font.GothamBold, ZIndex=501,
+    }, MinIcon)
+    local MinIconBtn = New("TextButton", {
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Text="", ZIndex=502,
+    }, MinIcon)
+    MakeDraggable(MinIcon, MinIcon)
+
     local mini = false
+    local function ShowMini()
+        mini = true
+        MF.Visible = false
+        MinIcon.Visible = true
+    end
+    local function HideMini()
+        mini = false
+        MinIcon.Visible = false
+        MF.Visible = true
+    end
+
+    MinIconBtn.MouseButton1Click:Connect(function() HideMini() end)
+
+    local MinB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-72,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="-", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
+    New("UICorner", {CornerRadius=UDim.new(0,6)}, MinB)
     MinB.MouseButton1Click:Connect(function()
-        mini = not mini
-        Tween(MF, {Size=mini and UDim2.new(0,680,0,48) or UDim2.new(0,680,0,460)}, 0.25)
+        if mini then HideMini() else ShowMini() end
     end)
+
     MakeDraggable(MF, TB)
 
     local SB = New("Frame", {Size=UDim2.new(0,54,1,-48), Position=UDim2.new(0,0,0,48), BackgroundColor3=Theme.Sidebar, BorderSizePixel=0, ZIndex=2}, MF)
@@ -373,8 +412,19 @@ function NightLib:CreateWindow(config)
     New("Frame", {Size=UDim2.new(0,1,1,-48), Position=UDim2.new(0,54,0,48), BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=2}, MF)
 
     local CA = New("Frame", {Size=UDim2.new(1,-55,1,-48), Position=UDim2.new(0,55,0,48), BackgroundTransparency=1, BorderSizePixel=0, ZIndex=2, ClipsDescendants=true}, MF)
-    local NC = New("Frame", {Size=UDim2.new(0,260,1,0), Position=UDim2.new(1,-270,0,0), BackgroundTransparency=1, ZIndex=10}, CA)
-    New("UIListLayout", {FillDirection=Enum.FillDirection.Vertical, VerticalAlignment=Enum.VerticalAlignment.Bottom, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,6)}, NC)
+
+    -- Notifications: screen-level, bottom-right corner (outside MF)
+    local NC = New("Frame", {
+        Size=UDim2.new(0,270,0,400),
+        Position=UDim2.new(1,-278,1,-410),
+        BackgroundTransparency=1, ZIndex=600,
+    }, SG)
+    New("UIListLayout", {
+        FillDirection=Enum.FillDirection.Vertical,
+        VerticalAlignment=Enum.VerticalAlignment.Bottom,
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        Padding=UDim.new(0,6),
+    }, NC)
     New("UIPadding", {PaddingBottom=UDim.new(0,10), PaddingRight=UDim.new(0,8)}, NC)
 
     local _blurEffect = nil
@@ -397,7 +447,12 @@ function NightLib:CreateWindow(config)
     local _updaters = {}
     local function Reg(fn) table.insert(_updaters, fn); table.insert(NightLib._themeUpdaters, fn) end
 
-    Reg(function() MF.BackgroundColor3=Theme.Background; TB.BackgroundColor3=Theme.Sidebar; SB.BackgroundColor3=Theme.Sidebar; LogoF.BackgroundColor3=Theme.Accent; TitleLbl.TextColor3=Theme.TextPrimary; SubLbl.TextColor3=Theme.TextSecondary end)
+    Reg(function()
+        MF.BackgroundColor3=Theme.Background; TB.BackgroundColor3=Theme.Sidebar
+        SB.BackgroundColor3=Theme.Sidebar; LogoF.BackgroundColor3=Theme.Accent
+        TitleLbl.TextColor3=Theme.TextPrimary; SubLbl.TextColor3=Theme.TextSecondary
+        MinIcon.BackgroundColor3=Theme.Accent
+    end)
 
     function WO:UpdateTheme(changes)
         for k, v in pairs(changes) do Theme[k] = v end
@@ -405,7 +460,9 @@ function NightLib:CreateWindow(config)
     end
 
     function WO:SetVisible(s)
-        visible = s; MF.Visible = s; NightLib._visible = s
+        visible = s
+        if s then HideMini() else MF.Visible = false end
+        NightLib._visible = s
         if _blurEffect then _blurEffect.Enabled = s end
     end
     function WO:GetVisible() return visible end
@@ -425,30 +482,33 @@ function NightLib:CreateWindow(config)
     end
     function WO:IsStreamerMode() return _streamerMode end
     function WO:AddSensitiveLabel(lbl) table.insert(_sensLabels, lbl) end
-
     function WO:LoadConfiguration() NightLib:LoadConfiguration() end
 
     UIS.InputBegan:Connect(function(i, gpe)
-        if not gpe and i.KeyCode == toggleKey then WO:SetVisible(not visible) end
+        if not gpe and i.KeyCode == toggleKey then
+            visible = not visible
+            if visible then HideMini() else ShowMini() end
+            NightLib._visible = visible
+        end
     end)
 
     function WO:Notify(cfg2)
         cfg2 = cfg2 or {}
         local dur = cfg2.Duration or 4
         local hasActions = cfg2.Actions and next(cfg2.Actions)
-        local N = New("Frame", {Size=UDim2.new(1,0,0,hasActions and 86 or 64), BackgroundColor3=cfg2.Color or Theme.NotifyBg, BorderSizePixel=0, BackgroundTransparency=1, ZIndex=11}, NC)
+        local N = New("Frame", {Size=UDim2.new(1,0,0,hasActions and 86 or 64), BackgroundColor3=cfg2.Color or Theme.NotifyBg, BorderSizePixel=0, BackgroundTransparency=1, ZIndex=601}, NC)
         New("UICorner", {CornerRadius=UDim.new(0,8)}, N)
         local xOff = 12
         if cfg2.Image and tonumber(cfg2.Image) then
-            New("ImageLabel", {Size=UDim2.new(0,30,0,30), Position=UDim2.new(0,10,0,10), BackgroundTransparency=1, Image="rbxassetid://"..tostring(cfg2.Image), ZIndex=12}, N)
+            New("ImageLabel", {Size=UDim2.new(0,30,0,30), Position=UDim2.new(0,10,0,10), BackgroundTransparency=1, Image="rbxassetid://"..tostring(cfg2.Image), ZIndex=602}, N)
             xOff = 46
         end
-        New("TextLabel", {Size=UDim2.new(1,-(xOff+8),0,20), Position=UDim2.new(0,xOff,0,8), BackgroundTransparency=1, Text=cfg2.Title or "Notification", TextColor3=Color3.new(1,1,1), TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=12}, N)
-        New("TextLabel", {Size=UDim2.new(1,-(xOff+8),0,30), Position=UDim2.new(0,xOff,0,28), BackgroundTransparency=1, Text=cfg2.Content or cfg2.Message or "", TextColor3=Color3.fromRGB(200,210,230), TextSize=11, Font=Enum.Font.Gotham, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=12}, N)
+        New("TextLabel", {Size=UDim2.new(1,-(xOff+8),0,20), Position=UDim2.new(0,xOff,0,8), BackgroundTransparency=1, Text=cfg2.Title or "Notification", TextColor3=Color3.new(1,1,1), TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=602}, N)
+        New("TextLabel", {Size=UDim2.new(1,-(xOff+8),0,30), Position=UDim2.new(0,xOff,0,28), BackgroundTransparency=1, Text=cfg2.Content or cfg2.Message or "", TextColor3=Color3.fromRGB(200,210,230), TextSize=11, Font=Enum.Font.Gotham, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=602}, N)
         if hasActions then
             local ai = 0
             for _, aData in pairs(cfg2.Actions) do
-                local AB = New("TextButton", {Size=UDim2.new(0,82,0,20), Position=UDim2.new(0,xOff+ai*90,0,64), BackgroundColor3=Theme.Accent, Text=aData.Name or "Action", TextColor3=Color3.new(1,1,1), TextSize=10, Font=Enum.Font.GothamBold, ZIndex=13}, N)
+                local AB = New("TextButton", {Size=UDim2.new(0,82,0,20), Position=UDim2.new(0,xOff+ai*90,0,64), BackgroundColor3=Theme.Accent, Text=aData.Name or "Action", TextColor3=Color3.new(1,1,1), TextSize=10, Font=Enum.Font.GothamBold, ZIndex=603}, N)
                 New("UICorner", {CornerRadius=UDim.new(0,4)}, AB)
                 AB.MouseButton1Click:Connect(function()
                     task.spawn(aData.Callback or function() end)
@@ -457,7 +517,7 @@ function NightLib:CreateWindow(config)
                 ai = ai + 1
             end
         end
-        local PB = New("Frame", {Size=UDim2.new(1,0,0,3), Position=UDim2.new(0,0,1,-3), BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=0.6, BorderSizePixel=0, ZIndex=13}, N)
+        local PB = New("Frame", {Size=UDim2.new(1,0,0,3), Position=UDim2.new(0,0,1,-3), BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=0.6, BorderSizePixel=0, ZIndex=603}, N)
         New("UICorner", {CornerRadius=UDim.new(0,2)}, PB)
         Tween(N, {BackgroundTransparency=0.1}, 0.3)
         Tween(PB, {Size=UDim2.new(0,0,0,3)}, dur, Enum.EasingStyle.Linear)
@@ -494,6 +554,7 @@ function NightLib:CreateWindow(config)
         local AD = New("Frame", {Size=UDim2.new(0,3,0,28), Position=UDim2.new(0,-7,0.5,-14), BackgroundColor3=Theme.Accent, BackgroundTransparency=1, BorderSizePixel=0, ZIndex=4}, TBtn)
         New("UICorner", {CornerRadius=UDim.new(0,2)}, AD)
 
+        -- Badge (manual only, never auto-triggered)
         local BadgeF = New("Frame", {Size=UDim2.new(0,16,0,16), Position=UDim2.new(1,-2,0,-2), AnchorPoint=Vector2.new(1,0), BackgroundColor3=Color3.fromRGB(220,60,60), Visible=false, ZIndex=8}, TBtn)
         New("UICorner", {CornerRadius=UDim.new(0.5,0)}, BadgeF)
         local BadgeLbl = New("TextLabel", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="", TextColor3=Color3.new(1,1,1), TextSize=8, Font=Enum.Font.GothamBold, ZIndex=9}, BadgeF)
@@ -533,8 +594,6 @@ function NightLib:CreateWindow(config)
             if n and n > 0 then
                 BadgeLbl.Text = n > 99 and "99+" or tostring(n)
                 BadgeF.Visible = true
-                Tween(BadgeF, {Size=UDim2.new(0,16,0,16)}, 0.0)
-                TweenService:Create(BadgeF, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size=UDim2.new(0,18,0,18)}):Play()
             else
                 BadgeF.Visible = false
             end
@@ -555,7 +614,6 @@ function NightLib:CreateWindow(config)
             local SH = New("Frame", {Size=UDim2.new(1,0,0,24), BackgroundTransparency=1, ZIndex=4, LayoutOrder=0}, SF)
             local SHL = New("TextLabel", {Size=UDim2.new(1,-40,1,0), BackgroundTransparency=1, Text=sTitle or "Section", TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, SH)
             New("Frame", {Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=5}, SH)
-
             Reg(function() SF.BackgroundColor3=Theme.Panel; SHL.TextColor3=Theme.TextSecondary end)
 
             local SO = {}
@@ -630,7 +688,7 @@ function NightLib:CreateWindow(config)
                 local x = bcfg.Icon and 36 or 10
                 local BTitleL = New("TextLabel", {Size=UDim2.new(1,-(x+40),0,20), Position=UDim2.new(0,x,bcfg.Description and 0.15 or 0.5,-10), BackgroundTransparency=1, Text=bcfg.Title or bcfg.Name or "Button", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, BFr)
                 if bcfg.Description then New("TextLabel", {Size=UDim2.new(1,-(x+10),0,16), Position=UDim2.new(0,x,0,24), BackgroundTransparency=1, Text=bcfg.Description, TextColor3=Theme.TextSecondary, TextSize=10, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, BFr) end
-                New("TextLabel", {Size=UDim2.new(0,20,1,0), Position=UDim2.new(1,-26,0,0), BackgroundTransparency=1, Text="›", TextColor3=Theme.TextSecondary, TextSize=18, Font=Enum.Font.GothamBold, ZIndex=5}, BFr)
+                New("TextLabel", {Size=UDim2.new(0,20,1,0), Position=UDim2.new(1,-26,0,0), BackgroundTransparency=1, Text=">", TextColor3=Theme.TextSecondary, TextSize=18, Font=Enum.Font.GothamBold, ZIndex=5}, BFr)
                 if bcfg.Tooltip or bcfg.Info then _makeTooltip(BFr, bcfg.Tooltip or bcfg.Info, Theme) end
                 Reg(function() BTitleL.TextColor3=Theme.TextPrimary end)
                 BFr.MouseEnter:Connect(function() Tween(BFr, {BackgroundColor3=Theme.Divider}, 0.1) end)
@@ -722,8 +780,7 @@ function NightLib:CreateWindow(config)
 
                 local function Round(n, d) local m = 10^d; return math.floor(n*m+0.5)/m end
                 local function SnapInc(v)
-                    local snapped = math.floor((v - sMin) / inc + 0.5) * inc + sMin
-                    return math.clamp(Round(snapped, dec), sMin, sMax)
+                    return math.clamp(Round(math.floor((v-sMin)/inc+0.5)*inc+sMin, dec), sMin, sMax)
                 end
                 local function SetVal(v, fire)
                     val = SnapInc(v)
@@ -761,9 +818,7 @@ function NightLib:CreateWindow(config)
                     if i.UserInputType == Enum.UserInputType.MouseButton1 then
                         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl) then
                             OpenTypeInput()
-                        else
-                            dragging = true
-                        end
+                        else dragging = true end
                     end
                 end)
                 hit.InputEnded:Connect(function(i)
@@ -807,7 +862,7 @@ function NightLib:CreateWindow(config)
                 if dcfg.Tooltip or dcfg.Info then _makeTooltip(DFr, dcfg.Tooltip or dcfg.Info, Theme) end
 
                 local displayText = multi and (#selected>0 and table.concat(selected,", ") or "None") or tostring(val)
-                local VBtn = New("TextButton", {Size=UDim2.new(0,110,0,24), Position=UDim2.new(1,-118,0.5,-12), BackgroundColor3=Theme.Background, Text=displayText.." ▾", TextColor3=Theme.Accent, TextSize=11, Font=Enum.Font.GothamBold, TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=6}, DFr)
+                local VBtn = New("TextButton", {Size=UDim2.new(0,110,0,24), Position=UDim2.new(1,-118,0.5,-12), BackgroundColor3=Theme.Background, Text=displayText.." v", TextColor3=Theme.Accent, TextSize=11, Font=Enum.Font.GothamBold, TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=6}, DFr)
                 New("UICorner", {CornerRadius=UDim.new(0,5)}, VBtn)
                 Reg(function() VBtn.BackgroundColor3=Theme.Background; VBtn.TextColor3=Theme.Accent end)
 
@@ -824,7 +879,7 @@ function NightLib:CreateWindow(config)
                     local SBFr = New("Frame", {Size=UDim2.new(1,0,0,searchBarH), BackgroundColor3=Theme.PanelAlt, BorderSizePixel=0, ZIndex=21}, DDL)
                     SearchBox = New("TextBox", {
                         Size=UDim2.new(1,-20,0,20), Position=UDim2.new(0,10,0,5),
-                        BackgroundTransparency=1, Text="", PlaceholderText="⌕ Search...",
+                        BackgroundTransparency=1, Text="", PlaceholderText="Search...",
                         TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary,
                         TextSize=11, Font=Enum.Font.Gotham, ZIndex=22, ClearTextOnFocus=false,
                     }, SBFr)
@@ -846,13 +901,13 @@ function NightLib:CreateWindow(config)
                     else return val==o end
                 end
                 local function updateDisplay()
-                    if multi then VBtn.Text=(#selected>0 and table.concat(selected,", ") or "None").." ▾"
-                    else VBtn.Text=tostring(val).." ▾" end
+                    if multi then VBtn.Text=(#selected>0 and table.concat(selected,", ") or "None").." v"
+                    else VBtn.Text=tostring(val).." v" end
                 end
 
                 for _, opt in ipairs(opts) do
                     local sel = isSelected(opt)
-                    local OB = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=sel and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=(multi and (sel and "✓ " or "  ") or "")..tostring(opt), TextColor3=sel and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
+                    local OB = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=sel and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=(multi and (sel and "+ " or "  ") or "")..tostring(opt), TextColor3=sel and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
                     optBtns[opt] = OB
                     OB.MouseEnter:Connect(function() Tween(OB, {BackgroundTransparency=0.85, TextColor3=Theme.TextPrimary}, 0.1) end)
                     OB.MouseLeave:Connect(function() Tween(OB, {BackgroundTransparency=isSelected(opt) and 0.7 or 1, TextColor3=isSelected(opt) and Theme.TextPrimary or Theme.TextSecondary}, 0.1) end)
@@ -862,7 +917,7 @@ function NightLib:CreateWindow(config)
                             for i, v2 in ipairs(selected) do if v2==opt then table.remove(selected, i); found=true; break end end
                             if not found then table.insert(selected, opt) end
                             local s = isSelected(opt)
-                            OB.Text = (s and "✓ " or "  ")..tostring(opt)
+                            OB.Text = (s and "+ " or "  ")..tostring(opt)
                             Tween(OB, {BackgroundTransparency=s and 0.7 or 1, TextColor3=s and Theme.TextPrimary or Theme.TextSecondary}, 0.1)
                             if flag then _autoSave(flag, selected) end
                             task.spawn(cb, selected)
@@ -902,7 +957,7 @@ function NightLib:CreateWindow(config)
                     updateDisplay()
                     for o2, b2 in pairs(optBtns) do
                         local s = isSelected(o2)
-                        b2.Text = (multi and (s and "✓ " or "  ") or "")..tostring(o2)
+                        b2.Text = (multi and (s and "+ " or "  ") or "")..tostring(o2)
                         Tween(b2, {BackgroundTransparency=s and 0.7 or 1, TextColor3=s and Theme.TextPrimary or Theme.TextSecondary}, 0.1)
                     end
                 end
@@ -913,7 +968,7 @@ function NightLib:CreateWindow(config)
                     optBtns = {}
                     for _, opt in ipairs(newOpts) do
                         local sel = isSelected(opt)
-                        local OB2 = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=sel and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=(multi and (sel and "✓ " or "  ") or "")..tostring(opt), TextColor3=sel and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
+                        local OB2 = New("TextButton", {Size=UDim2.new(1,0,0,28), BackgroundTransparency=sel and 0.7 or 1, BackgroundColor3=Theme.Accent, Text=(multi and (sel and "+ " or "  ") or "")..tostring(opt), TextColor3=sel and Theme.TextPrimary or Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=22}, DDS)
                         optBtns[opt] = OB2
                         OB2.MouseEnter:Connect(function() Tween(OB2, {BackgroundTransparency=0.85, TextColor3=Theme.TextPrimary}, 0.1) end)
                         OB2.MouseLeave:Connect(function() Tween(OB2, {BackgroundTransparency=isSelected(opt) and 0.7 or 1, TextColor3=isSelected(opt) and Theme.TextPrimary or Theme.TextSecondary}, 0.1) end)
@@ -1095,9 +1150,7 @@ function NightLib:CreateWindow(config)
                         if i.KeyCode == val then
                             if modVal then
                                 if UIS:IsKeyDown(modVal) then task.spawn(kcfg.ActivateOnPress) end
-                            else
-                                task.spawn(kcfg.ActivateOnPress)
-                            end
+                            else task.spawn(kcfg.ActivateOnPress) end
                         end
                     end)
                 end
@@ -1187,7 +1240,7 @@ function NightLib:CreateWindow(config)
                 Reg(function() AFr.BackgroundColor3=Theme.PanelAlt end)
                 local Head = New("TextButton", {Size=UDim2.new(1,0,0,36), BackgroundTransparency=1, Text="", ZIndex=5}, AFr)
                 local ATitleL = New("TextLabel", {Size=UDim2.new(1,-40,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=acfg.Title or "Accordion", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6}, Head)
-                local Arrow = New("TextLabel", {Size=UDim2.new(0,24,1,0), Position=UDim2.new(1,-30,0,0), BackgroundTransparency=1, Text=expanded and "▲" or "▼", TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.GothamBold, ZIndex=6}, Head)
+                local Arrow = New("TextLabel", {Size=UDim2.new(0,24,1,0), Position=UDim2.new(1,-30,0,0), BackgroundTransparency=1, Text=expanded and "^" or "v", TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.GothamBold, ZIndex=6}, Head)
                 Reg(function() ATitleL.TextColor3=Theme.TextPrimary; Arrow.TextColor3=Theme.TextSecondary end)
                 local itemH = #items * 30
                 local IFrame = New("Frame", {Size=UDim2.new(1,-20,0,itemH), Position=UDim2.new(0,10,0,40), BackgroundTransparency=1, ZIndex=5}, AFr)
@@ -1203,7 +1256,7 @@ function NightLib:CreateWindow(config)
                 local totalH = 36 + (expanded and itemH+10 or 0)
                 AFr.Size = UDim2.new(1,0,0,totalH)
                 Head.MouseButton1Click:Connect(function()
-                    expanded = not expanded; Arrow.Text = expanded and "▲" or "▼"
+                    expanded = not expanded; Arrow.Text = expanded and "^" or "v"
                     Tween(AFr, {Size=UDim2.new(1,0,0,expanded and 36+itemH+10 or 36)}, 0.25)
                 end)
             end
@@ -1262,11 +1315,11 @@ function NightLib:CreateWindow(config)
                 Reg(function() SpFr.BackgroundColor3=Theme.PanelAlt end)
                 local SpTitleL = New("TextLabel", {Size=UDim2.new(1,-130,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=spcfg.Title or "Spinner", TextColor3=Theme.TextPrimary, TextSize=13, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5}, SpFr)
                 Reg(function() SpTitleL.TextColor3=Theme.TextPrimary end)
-                local LB2 = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-124,0.5,-12), BackgroundColor3=Theme.Background, Text="‹", TextColor3=Theme.Accent, TextSize=16, Font=Enum.Font.GothamBold, ZIndex=5}, SpFr)
+                local LB2 = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-124,0.5,-12), BackgroundColor3=Theme.Background, Text="<", TextColor3=Theme.Accent, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=5}, SpFr)
                 New("UICorner", {CornerRadius=UDim.new(0,5)}, LB2)
                 local VL4 = New("TextLabel", {Size=UDim2.new(0,60,0,24), Position=UDim2.new(1,-98,0.5,-12), BackgroundColor3=Theme.Background, BackgroundTransparency=0, Text=tostring(opts[idx] or ""), TextColor3=Theme.TextPrimary, TextSize=11, Font=Enum.Font.Gotham, ZIndex=5}, SpFr)
                 New("UICorner", {CornerRadius=UDim.new(0,5)}, VL4)
-                local RB2 = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-36,0.5,-12), BackgroundColor3=Theme.Background, Text="›", TextColor3=Theme.Accent, TextSize=16, Font=Enum.Font.GothamBold, ZIndex=5}, SpFr)
+                local RB2 = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-36,0.5,-12), BackgroundColor3=Theme.Background, Text=">", TextColor3=Theme.Accent, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=5}, SpFr)
                 New("UICorner", {CornerRadius=UDim.new(0,5)}, RB2)
                 Reg(function() LB2.BackgroundColor3=Theme.Background; LB2.TextColor3=Theme.Accent; VL4.BackgroundColor3=Theme.Background; VL4.TextColor3=Theme.TextPrimary; RB2.BackgroundColor3=Theme.Background; RB2.TextColor3=Theme.Accent end)
                 local function update2() VL4.Text=tostring(opts[idx] or ""); if flag then _autoSave(flag, opts[idx]) end; task.spawn(cb, opts[idx]) end
@@ -1375,7 +1428,7 @@ function NightLib:CreateWindow(config)
                 task.delay(2, function()
                     WO:Dialog({
                         Title="Join our Discord",
-                        Content="https://discord.gg/AuQqvrJE79"..inv,
+                        Content="https://discord.gg/"..inv,
                         Buttons={
                             {Title="Join", Color=Theme.Accent, Callback=function()
                                 if dFile and config.Discord.RememberJoins then pcall(writefile, dFile, "joined") end
