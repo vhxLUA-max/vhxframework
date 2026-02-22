@@ -15,6 +15,37 @@ NightLib._themeUpdaters  = {}
 NightLib._currentTheme   = nil
 
 local function _filePath(p) return "NightLib_"..(p or NightLib._profile)..".json" end
+local _statsFile = "NightLib_Stats.json"
+
+local function _loadStats()
+    local ok, raw = pcall(readfile, _statsFile)
+    if not ok or not raw or raw == "" then return {} end
+    local ok2, d = pcall(function() return HttpService:JSONDecode(raw) end)
+    return ok2 and d or {}
+end
+
+local function _saveStats(d)
+    pcall(writefile, _statsFile, HttpService:JSONEncode(d))
+end
+
+local _statsSession = tick()
+NightLib.Stats = (function()
+    local d = _loadStats()
+    d.executions = (d.executions or 0) + 1
+    d.first_run  = d.first_run or os.time()
+    d.last_run   = os.time()
+    d.total_time = d.total_time or 0
+    _saveStats(d)
+    -- accumulate session time on shutdown (best-effort via heartbeat)
+    task.spawn(function()
+        while task.wait(30) do
+            local now = _loadStats()
+            now.total_time = (now.total_time or 0) + 30
+            _saveStats(now)
+        end
+    end)
+    return d
+end)()
 
 function NightLib:SaveConfig(profile)
     profile = profile or self._profile
@@ -141,7 +172,64 @@ local Themes = {
         Divider       = Color3.fromRGB(55,28,40),    ToggleOn      = Color3.fromRGB(255,80,140),
         ToggleOff     = Color3.fromRGB(55,28,40),    NotifyBg      = Color3.fromRGB(120,20,60),
     },
+    Neon = {
+        Background    = Color3.fromRGB(8,8,10),      Sidebar       = Color3.fromRGB(6,6,8),
+        Panel         = Color3.fromRGB(14,14,18),    PanelAlt      = Color3.fromRGB(18,18,24),
+        Accent        = Color3.fromRGB(0,255,128),   AccentAlt     = Color3.fromRGB(255,0,180),
+        TextPrimary   = Color3.fromRGB(200,255,220), TextSecondary = Color3.fromRGB(80,160,100),
+        Divider       = Color3.fromRGB(20,40,28),    ToggleOn      = Color3.fromRGB(0,255,128),
+        ToggleOff     = Color3.fromRGB(20,40,28),    NotifyBg      = Color3.fromRGB(0,80,40),
+    },
+    Forest = {
+        Background    = Color3.fromRGB(14,20,16),    Sidebar       = Color3.fromRGB(10,15,12),
+        Panel         = Color3.fromRGB(20,30,22),    PanelAlt      = Color3.fromRGB(26,38,28),
+        Accent        = Color3.fromRGB(80,200,100),  AccentAlt     = Color3.fromRGB(200,160,60),
+        TextPrimary   = Color3.fromRGB(220,240,222), TextSecondary = Color3.fromRGB(100,140,105),
+        Divider       = Color3.fromRGB(30,50,34),    ToggleOn      = Color3.fromRGB(80,200,100),
+        ToggleOff     = Color3.fromRGB(30,50,34),    NotifyBg      = Color3.fromRGB(20,70,30),
+    },
+    Sunset = {
+        Background    = Color3.fromRGB(22,14,10),    Sidebar       = Color3.fromRGB(16,10,8),
+        Panel         = Color3.fromRGB(32,20,14),    PanelAlt      = Color3.fromRGB(40,26,18),
+        Accent        = Color3.fromRGB(255,140,40),  AccentAlt     = Color3.fromRGB(255,60,80),
+        TextPrimary   = Color3.fromRGB(255,235,220), TextSecondary = Color3.fromRGB(160,110,80),
+        Divider       = Color3.fromRGB(60,35,20),    ToggleOn      = Color3.fromRGB(255,140,40),
+        ToggleOff     = Color3.fromRGB(55,30,18),    NotifyBg      = Color3.fromRGB(120,50,10),
+    },
+    Carbon = {
+        Background    = Color3.fromRGB(16,16,16),    Sidebar       = Color3.fromRGB(12,12,12),
+        Panel         = Color3.fromRGB(24,24,24),    PanelAlt      = Color3.fromRGB(30,30,30),
+        Accent        = Color3.fromRGB(200,200,200), AccentAlt     = Color3.fromRGB(255,80,80),
+        TextPrimary   = Color3.fromRGB(245,245,245), TextSecondary = Color3.fromRGB(130,130,130),
+        Divider       = Color3.fromRGB(40,40,40),    ToggleOn      = Color3.fromRGB(180,180,180),
+        ToggleOff     = Color3.fromRGB(45,45,45),    NotifyBg      = Color3.fromRGB(50,50,50),
+    },
+    Crimson = {
+        Background    = Color3.fromRGB(18,8,8),      Sidebar       = Color3.fromRGB(12,6,6),
+        Panel         = Color3.fromRGB(28,12,12),    PanelAlt      = Color3.fromRGB(36,16,16),
+        Accent        = Color3.fromRGB(220,40,40),   AccentAlt     = Color3.fromRGB(255,140,40),
+        TextPrimary   = Color3.fromRGB(255,225,225), TextSecondary = Color3.fromRGB(150,90,90),
+        Divider       = Color3.fromRGB(55,20,20),    ToggleOn      = Color3.fromRGB(220,40,40),
+        ToggleOff     = Color3.fromRGB(55,20,20),    NotifyBg      = Color3.fromRGB(100,10,10),
+    },
+    Gold = {
+        Background    = Color3.fromRGB(18,14,6),     Sidebar       = Color3.fromRGB(14,10,4),
+        Panel         = Color3.fromRGB(28,22,8),     PanelAlt      = Color3.fromRGB(36,28,10),
+        Accent        = Color3.fromRGB(255,200,40),  AccentAlt     = Color3.fromRGB(255,120,20),
+        TextPrimary   = Color3.fromRGB(255,245,210), TextSecondary = Color3.fromRGB(160,130,60),
+        Divider       = Color3.fromRGB(55,42,12),    ToggleOn      = Color3.fromRGB(255,200,40),
+        ToggleOff     = Color3.fromRGB(50,38,10),    NotifyBg      = Color3.fromRGB(100,70,5),
+    },
+    Ocean = {
+        Background    = Color3.fromRGB(8,18,28),     Sidebar       = Color3.fromRGB(6,14,22),
+        Panel         = Color3.fromRGB(12,28,44),    PanelAlt      = Color3.fromRGB(16,34,54),
+        Accent        = Color3.fromRGB(30,160,255),  AccentAlt     = Color3.fromRGB(0,220,180),
+        TextPrimary   = Color3.fromRGB(210,235,255), TextSecondary = Color3.fromRGB(80,130,170),
+        Divider       = Color3.fromRGB(18,45,70),    ToggleOn      = Color3.fromRGB(30,160,255),
+        ToggleOff     = Color3.fromRGB(18,45,70),    NotifyBg      = Color3.fromRGB(10,60,110),
+    },
 }
+NightLib.Themes = Themes
 
 local function Tween(obj, props, dur, style, dir)
     TweenService:Create(obj, TweenInfo.new(dur or 0.2, style or Enum.EasingStyle.Quad,
@@ -368,7 +456,7 @@ function NightLib:CreateWindow(config)
         Tween(MF, {Position=UDim2.new(0.5,-340,1.2,0)}, 0.3); task.wait(0.35); SG:Destroy()
     end)
 
-    -- Persistent floating icon (always visible, draggable, toggles MF)
+    -- Persistent floating icon — always visible, draggable, tap to toggle MF
     local MinIcon = New("Frame", {
         Size=UDim2.new(0,50,0,50),
         Position=UDim2.new(0,20,0.5,-25),
@@ -376,40 +464,53 @@ function NightLib:CreateWindow(config)
         BorderSizePixel=0, Visible=true, ZIndex=500,
     }, SG)
     New("UICorner", {CornerRadius=UDim.new(0,13)}, MinIcon)
-    New("UIStroke", {Color=Theme.Accent, Thickness=1.5}, MinIcon)
+    local MinStroke = New("UIStroke", {Color=Theme.Accent, Thickness=1.5}, MinIcon)
     New("ImageLabel", {
         Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4),
         BackgroundTransparency=1, Image=NightLib.AssetIcons.logo,
         ScaleType=Enum.ScaleType.Fit, ZIndex=501,
     }, MinIcon)
-    local MinIconBtn = New("TextButton", {
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Text="", ZIndex=502,
-    }, MinIcon)
-    MakeDraggable(MinIcon, MinIcon)
 
-    local _dragged = false
-    local _dragDelta = Vector2.new(0,0)
-    MinIcon.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            _dragged = false; _dragDelta = Vector2.new(0,0)
-        end
-    end)
-    UIS.InputChanged:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch then
-            _dragDelta = _dragDelta + Vector2.new(math.abs(i.Delta.X), math.abs(i.Delta.Y))
-            if _dragDelta.Magnitude > 4 then _dragged = true end
-        end
-    end)
-    MinIconBtn.MouseButton1Click:Connect(function()
-        if _dragged then return end
-        visible = not visible
-        MF.Visible = visible
-        NightLib._visible = visible
-        Tween(MinIcon, {BackgroundColor3=visible and Theme.Background or Theme.Accent}, 0.2)
-    end)
+    -- Drag logic: track press position, compare to release position
+    -- If moved > threshold = drag (no toggle), else = tap (toggle)
+    do
+        local dragging = false
+        local dragStartPos = Vector2.new()
+        local frameStartPos = UDim2.new()
+        local TAP_THRESHOLD = 6
+
+        MinIcon.InputBegan:Connect(function(i)
+            if i.UserInputType ~= Enum.UserInputType.MouseButton1
+            and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            dragging = true
+            dragStartPos = Vector2.new(i.Position.X, i.Position.Y)
+            frameStartPos = MinIcon.Position
+        end)
+
+        local iconMoveConn = UIS.InputChanged:Connect(function(i)
+            if not dragging then return end
+            if i.UserInputType ~= Enum.UserInputType.MouseMovement
+            and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            local d = Vector2.new(i.Position.X - dragStartPos.X, i.Position.Y - dragStartPos.Y)
+            MinIcon.Position = UDim2.new(
+                frameStartPos.X.Scale, frameStartPos.X.Offset + d.X,
+                frameStartPos.Y.Scale, frameStartPos.Y.Offset + d.Y
+            )
+        end)
+
+        MinIcon.InputEnded:Connect(function(i)
+            if not dragging then return end
+            if i.UserInputType ~= Enum.UserInputType.MouseButton1
+            and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            local dist = Vector2.new(i.Position.X - dragStartPos.X, i.Position.Y - dragStartPos.Y).Magnitude
+            dragging = false
+            if dist <= TAP_THRESHOLD then
+                visible = not visible
+                MF.Visible = visible
+                NightLib._visible = visible
+            end
+        end)
+    end
 
     local MinB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-72,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="-", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, MinB)
@@ -417,7 +518,6 @@ function NightLib:CreateWindow(config)
         visible = not visible
         MF.Visible = visible
         NightLib._visible = visible
-        Tween(MinIcon, {BackgroundColor3=visible and Theme.Background or Theme.Accent}, 0.2)
     end)
 
     MakeDraggable(MF, TB)
@@ -467,7 +567,8 @@ function NightLib:CreateWindow(config)
         MF.BackgroundColor3=Theme.Background; TB.BackgroundColor3=Theme.Sidebar
         SB.BackgroundColor3=Theme.Sidebar; LogoF.BackgroundColor3=Theme.Accent
         TitleLbl.TextColor3=Theme.TextPrimary; SubLbl.TextColor3=Theme.TextSecondary
-        MinIcon.BackgroundColor3=visible and Theme.Background or Theme.Accent
+        MinIcon.BackgroundColor3=Theme.Background; MinStroke.Color=Theme.Accent
+        MinB.BackgroundColor3=Theme.PanelAlt; MinB.TextColor3=Theme.TextSecondary
     end)
 
     function WO:UpdateTheme(changes)
@@ -475,11 +576,34 @@ function NightLib:CreateWindow(config)
         for _, fn in ipairs(_updaters) do pcall(fn) end
     end
 
+    function WO:SetTheme(name)
+        local t = Themes[name]; if not t then return end
+        for k, v in pairs(t) do Theme[k] = v end
+        NightLib._currentTheme = Theme
+        for _, fn in ipairs(_updaters) do pcall(fn) end
+    end
+
+    function WO:GetThemeNames()
+        local names = {}
+        for k in pairs(Themes) do names[#names+1] = k end
+        table.sort(names)
+        return names
+    end
+
+    function WO:GetStats()
+        local d = _loadStats()
+        local sessionSecs = math.floor(tick() - _statsSession)
+        return {
+            executions  = d.executions or 1,
+            total_time  = (d.total_time or 0) + sessionSecs,
+            first_run   = d.first_run or os.time(),
+            last_run    = d.last_run or os.time(),
+            session     = sessionSecs,
+        }
+    end
+
     function WO:SetVisible(s)
-        visible = s
-        MF.Visible = s
-        NightLib._visible = s
-        Tween(MinIcon, {BackgroundColor3=s and Theme.Background or Theme.Accent}, 0.2)
+        visible = s; MF.Visible = s; NightLib._visible = s
         if _blurEffect then _blurEffect.Enabled = s end
     end
     function WO:GetVisible() return visible end
@@ -503,10 +627,7 @@ function NightLib:CreateWindow(config)
 
     UIS.InputBegan:Connect(function(i, gpe)
         if not gpe and i.KeyCode == toggleKey then
-            visible = not visible
-            MF.Visible = visible
-            NightLib._visible = visible
-            Tween(MinIcon, {BackgroundColor3=visible and Theme.Background or Theme.Accent}, 0.2)
+            visible = not visible; MF.Visible = visible; NightLib._visible = visible
         end
     end)
 
