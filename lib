@@ -1008,7 +1008,13 @@ function NightLib:CreateWindow(config)
                 local useSearch = #opts >= SEARCH_THRESH
                 local searchBarH = useSearch and 30 or 0
                 local maxVis = math.min(#opts, 5)
-                local DDL = New("Frame", {Size=UDim2.new(0,110,0,maxVis*28+6+searchBarH), Position=UDim2.new(1,-118,1,4), BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=20, ClipsDescendants=true}, DFr)
+                -- Parent to SG so it's never clipped by CA/MF ClipsDescendants
+                local DDL = New("Frame", {
+                    Size=UDim2.new(0,110,0,maxVis*28+6+searchBarH),
+                    Position=UDim2.new(0,0,0,0),
+                    BackgroundColor3=Theme.Panel, BorderSizePixel=0,
+                    Visible=false, ZIndex=100, ClipsDescendants=true,
+                }, SG)
                 New("UICorner", {CornerRadius=UDim.new(0,6)}, DDL)
                 New("UIStroke", {Color=Theme.Divider, Thickness=1}, DDL)
                 Reg(function() DDL.BackgroundColor3=Theme.Panel end)
@@ -1086,8 +1092,31 @@ function NightLib:CreateWindow(config)
                 end
 
                 VBtn.MouseButton1Click:Connect(function()
-                    open = not open; DDL.Visible = open
-                    if open and SearchBox then task.defer(function() SearchBox:CaptureFocus() end) end
+                    open = not open
+                    if open then
+                        -- Position DDL in screen space so it's never clipped
+                        local abs = VBtn.AbsolutePosition
+                        local sz  = VBtn.AbsoluteSize
+                        DDL.Position = UDim2.new(0, abs.X, 0, abs.Y + sz.Y + 4)
+                        DDL.Size = UDim2.new(0, math.max(sz.X, 110), 0, maxVis*28+6+searchBarH)
+                        if SearchBox then task.defer(function() SearchBox:CaptureFocus() end) end
+                    end
+                    DDL.Visible = open
+                end)
+
+                -- Close when clicking outside
+                UIS.InputBegan:Connect(function(i)
+                    if open and i.UserInputType == Enum.UserInputType.MouseButton1 then
+                        local mp = i.Position
+                        local ap = DDL.AbsolutePosition; local as = DDL.AbsoluteSize
+                        local vp = VBtn.AbsolutePosition; local vs = VBtn.AbsoluteSize
+                        local inDDL = mp.X>=ap.X and mp.X<=ap.X+as.X and mp.Y>=ap.Y and mp.Y<=ap.Y+as.Y
+                        local inVBtn= mp.X>=vp.X and mp.X<=vp.X+vs.X and mp.Y>=vp.Y and mp.Y<=vp.Y+vs.Y
+                        if not inDDL and not inVBtn then
+                            open = false; DDL.Visible = false
+                            if SearchBox then SearchBox.Text = "" end
+                        end
+                    end
                 end)
 
                 local dObj = {}
