@@ -269,19 +269,20 @@ local function MakeDraggable(frame, handle)
     return conns
 end
 
+-- Roblox-compatible icon set (GothamBold-safe subset + readable symbols)
 local Icons = {
-    home="⌂",  settings="⚙",  user="◯",   star="★",    bell="◬",    code=">_",
-    map="◉",   shield="◈",    zap="⚡",    eye="◎",     lock="◈",    key="⊕",
-    trash="⊠", copy="⊟",     download="↓",upload="↑",  search="⌕",  plus="+",
-    minus="-", check="✓",     x="✕",       arrow_right="→",arrow_left="←",
-    refresh="↻",wifi="◌",    globe="◉",   server="▣",  cpu="⬚",     database="⬡",
-    layers="⬜",terminal=">_",sword="⚔",  gamepad="⊞", flag="⚑",    heart="♥",
-    info="ℹ",  alert="⚠",    chart="▦",   list="☰",    grid="⊞",    folder="▤",
-    paint="◍", pin="◆",       cursor="◈",  fire="⚡",   crown="♕",   diamond="◆",
-    moon="☽",  sun="☀",       cloud="☁",   close="✕",   menu="≡",    save="▦",
-    edit="✎",  link="⊕",      share="⊏",   time="◷",    tag="◇",
+    home="[]",  settings="*",   user="O",    star="*",    bell="!",    code=">_",
+    map="@",    shield="#",     zap="!",     eye="O",     lock="#",    key="+",
+    trash="X",  copy="[]",      download="v",upload="^",  search="?",  plus="+",
+    minus="-",  check="v",      x="X",       arrow_right=">",arrow_left="<",
+    refresh="R",wifi="~",       globe="@",   server="[]", cpu="[]",    database="{}",
+    layers="[]",terminal=">_",  sword="X",   gamepad="[]",flag="!",    heart="<3",
+    info="i",   alert="!",      chart="#",   list="=",    grid="[]",   folder="[]",
+    paint="*",  pin="*",        cursor=">",  fire="!",    crown="^",   diamond="<>",
+    moon="O",   sun="*",        cloud="~",   close="X",   menu="=",    save="[]",
+    edit="E",   link="+",       share="<",   time="O",    tag="<>",
 }
-local function GetIcon(n) return Icons[n and n:lower()] or "●" end
+local function GetIcon(n) return Icons[n and n:lower()] or "*" end
 
 NightLib.AssetIcons = {
     logo = "rbxassetid://82863510537255",
@@ -396,6 +397,7 @@ function NightLib:CreateWindow(config)
     local idleAlpha    = config.IdleTransparency or 0.7
     local dynTrans     = config.DynamicTransparency ~= false and config.DynamicTransparency or false
     local baseBgAlpha  = config.Acrylic and 0.08 or 0
+    local _uiAlpha     = baseBgAlpha  -- mutable, updated by SetTransparency
     local _hovering    = false
 
     if config.Profile then self:SetProfile(config.Profile) end
@@ -434,7 +436,7 @@ function NightLib:CreateWindow(config)
     New("UIStroke", {Color=Theme.Divider, Thickness=1}, MF)
 
     if config.Acrylic then
-        MF.BackgroundTransparency = baseBgAlpha
+        MF.BackgroundTransparency = _uiAlpha
         New("ImageLabel", {
             Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
             Image="rbxassetid://9968344292", ImageTransparency=0.94,
@@ -452,7 +454,7 @@ function NightLib:CreateWindow(config)
     local TB = New("Frame", {Size=UDim2.new(1,0,0,48), BackgroundColor3=Theme.Sidebar, BorderSizePixel=0, ZIndex=2}, MF)
     local LogoF = New("Frame", {Size=UDim2.new(0,32,0,32), Position=UDim2.new(0,10,0.5,-16), BackgroundColor3=Theme.Accent, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,8)}, LogoF)
-    New("TextLabel", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="◑", TextColor3=Color3.new(1,1,1), TextSize=18, Font=Enum.Font.GothamBold, ZIndex=4}, LogoF)
+    New("TextLabel", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="O", TextColor3=Color3.new(1,1,1), TextSize=18, Font=Enum.Font.GothamBold, ZIndex=4}, LogoF)
 
     local TitleLbl = New("TextLabel", {Size=UDim2.new(0,180,0,22), Position=UDim2.new(0,50,0,7), BackgroundTransparency=1, Text=Title, TextColor3=Theme.TextPrimary, TextSize=15, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=3}, TB)
     local SubLbl   = New("TextLabel", {Size=UDim2.new(0,180,0,16), Position=UDim2.new(0,50,0,28), BackgroundTransparency=1, Text=Sub, TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=3}, TB)
@@ -460,29 +462,35 @@ function NightLib:CreateWindow(config)
     local _streamerMode = false
     local _sensLabels   = {TitleLbl, SubLbl}
 
-    local CB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-38,0.5,-14), BackgroundColor3=Color3.fromRGB(200,60,60), Text="✕", TextColor3=Color3.new(1,1,1), TextSize=12, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
+    -- Close button
+    local CB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-38,0.5,-14), BackgroundColor3=Color3.fromRGB(200,60,60), Text="X", TextColor3=Color3.new(1,1,1), TextSize=11, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, CB)
+    CB.MouseEnter:Connect(function() Tween(CB, {BackgroundColor3=Color3.fromRGB(240,70,70)}, 0.1) end)
+    CB.MouseLeave:Connect(function() Tween(CB, {BackgroundColor3=Color3.fromRGB(200,60,60)}, 0.1) end)
 
-    local SrchBtn = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-108,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="⌕", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
+    -- Search button
+    local SrchBtn = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-108,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="?", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, SrchBtn)
 
     local visible = true
 
+    -- ── Smooth animation helpers ──────────────────────────────────────────────
     local function _animHide()
-        Tween(_mfScale, {Scale=_mfBaseScale*0.94}, 0.18, Enum.EasingStyle.Quart)
-        Tween(MF, {BackgroundTransparency=1}, 0.16)
-        task.wait(0.19)
+        Tween(_mfScale, {Scale=_mfBaseScale*0.91}, 0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        Tween(MF, {BackgroundTransparency=1}, 0.20, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        task.wait(0.26)
         MF.Visible = false
         _mfScale.Scale = _mfBaseScale
-        MF.BackgroundTransparency = baseBgAlpha
+        MF.BackgroundTransparency = _uiAlpha
     end
 
     local function _animShow()
         MF.Visible = true
-        _mfScale.Scale = _mfBaseScale * 0.88
+        _mfScale.Scale = _mfBaseScale * 0.82
         MF.BackgroundTransparency = 1
-        Tween(_mfScale, {Scale=_mfBaseScale}, 0.32, Enum.EasingStyle.Back)
-        Tween(MF, {BackgroundTransparency=baseBgAlpha}, 0.24, Enum.EasingStyle.Quart)
+        -- Spring bounce on scale, smooth fade-in
+        Tween(_mfScale, {Scale=_mfBaseScale}, 0.44, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
+        Tween(MF, {BackgroundTransparency=_uiAlpha}, 0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     end
 
     local function _setVisible(s)
@@ -492,9 +500,9 @@ function NightLib:CreateWindow(config)
     end
 
     CB.MouseButton1Click:Connect(function()
-        Tween(_mfScale, {Scale=_mfBaseScale*0.88}, 0.2, Enum.EasingStyle.Quart)
-        Tween(MF, {BackgroundTransparency=1}, 0.18)
-        task.wait(0.22); SG:Destroy()
+        Tween(_mfScale, {Scale=_mfBaseScale*0.86}, 0.22, Enum.EasingStyle.Quint)
+        Tween(MF, {BackgroundTransparency=1}, 0.20)
+        task.wait(0.24); SG:Destroy()
         _statsActive = false
     end)
 
@@ -502,7 +510,7 @@ function NightLib:CreateWindow(config)
     if dynTrans then
         MF.MouseEnter:Connect(function()
             _hovering = true
-            Tween(MF, {BackgroundTransparency=baseBgAlpha}, 0.3, Enum.EasingStyle.Quart)
+            Tween(MF, {BackgroundTransparency=_uiAlpha}, 0.3, Enum.EasingStyle.Quart)
         end)
         MF.MouseLeave:Connect(function()
             _hovering = false
@@ -518,30 +526,79 @@ function NightLib:CreateWindow(config)
         end
     end
 
-    -- Search overlay (parented to SG to avoid clipping)
+    -- ── Search overlay ────────────────────────────────────────────────────────
     local SearchOverlay = New("Frame", {
-        Size=UDim2.new(0,340,0,400), Position=UDim2.new(0.5,-170,0.5,-200),
+        Size=UDim2.new(0,340,0,420), Position=UDim2.new(0.5,-170,0.5,-210),
         BackgroundColor3=Theme.Panel, BorderSizePixel=0, Visible=false, ZIndex=500,
     }, SG)
-    New("UICorner", {CornerRadius=UDim.new(0,10)}, SearchOverlay)
+    New("UICorner", {CornerRadius=UDim.new(0,12)}, SearchOverlay)
     New("UIStroke", {Color=Theme.Accent, Thickness=1}, SearchOverlay)
 
-    local SrchInputF = New("Frame", {Size=UDim2.new(1,-16,0,36), Position=UDim2.new(0,8,0,8), BackgroundColor3=Theme.Background, BorderSizePixel=0, ZIndex=501}, SearchOverlay)
-    New("UICorner", {CornerRadius=UDim.new(0,7)}, SrchInputF)
-    New("TextLabel", {Size=UDim2.new(0,20,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text="⌕", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=502}, SrchInputF)
-    local SrchBox = New("TextBox", {Size=UDim2.new(1,-40,0,24), Position=UDim2.new(0,32,0.5,-12), BackgroundTransparency=1, Text="", PlaceholderText="Search elements...", TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary, TextSize=13, Font=Enum.Font.Gotham, ZIndex=502, ClearTextOnFocus=false}, SrchInputF)
-    local SrchCloseBtn = New("TextButton", {Size=UDim2.new(0,24,0,24), Position=UDim2.new(1,-28,0.5,-12), BackgroundTransparency=1, Text="✕", TextColor3=Theme.TextSecondary, TextSize=11, Font=Enum.Font.GothamBold, ZIndex=502}, SrchInputF)
+    -- Header bar with title and prominent X button
+    local SrchHeaderBar = New("Frame", {
+        Size=UDim2.new(1,0,0,46), BackgroundTransparency=1, ZIndex=501
+    }, SearchOverlay)
+    New("TextLabel", {
+        Size=UDim2.new(1,-56,1,0), Position=UDim2.new(0,16,0,0),
+        BackgroundTransparency=1, Text="Search",
+        TextColor3=Theme.TextPrimary, TextSize=14, Font=Enum.Font.GothamBold,
+        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=502
+    }, SrchHeaderBar)
+    -- Prominent X / close button
+    local SrchExitBtn = New("TextButton", {
+        Size=UDim2.new(0,30,0,30), Position=UDim2.new(1,-40,0.5,-15),
+        BackgroundColor3=Color3.fromRGB(200,55,55), Text="X",
+        TextColor3=Color3.new(1,1,1), TextSize=12, Font=Enum.Font.GothamBold, ZIndex=503
+    }, SrchHeaderBar)
+    New("UICorner", {CornerRadius=UDim.new(0,8)}, SrchExitBtn)
+    SrchExitBtn.MouseEnter:Connect(function() Tween(SrchExitBtn,{BackgroundColor3=Color3.fromRGB(240,65,65)},0.1) end)
+    SrchExitBtn.MouseLeave:Connect(function() Tween(SrchExitBtn,{BackgroundColor3=Color3.fromRGB(200,55,55)},0.1) end)
 
+    -- Divider under header
+    New("Frame", {
+        Size=UDim2.new(1,-24,0,1), Position=UDim2.new(0,12,0,46),
+        BackgroundColor3=Theme.Divider, BorderSizePixel=0, ZIndex=501
+    }, SearchOverlay)
+
+    -- Search input field
+    local SrchInputF = New("Frame", {
+        Size=UDim2.new(1,-16,0,36), Position=UDim2.new(0,8,0,54),
+        BackgroundColor3=Theme.Background, BorderSizePixel=0, ZIndex=501
+    }, SearchOverlay)
+    New("UICorner", {CornerRadius=UDim.new(0,8)}, SrchInputF)
+    New("UIStroke", {Color=Theme.Divider, Thickness=1}, SrchInputF)
+
+    New("TextLabel", {
+        Size=UDim2.new(0,22,1,0), Position=UDim2.new(0,10,0,0),
+        BackgroundTransparency=1, Text="?",
+        TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=502
+    }, SrchInputF)
+    local SrchBox = New("TextBox", {
+        Size=UDim2.new(1,-44,0,24), Position=UDim2.new(0,34,0.5,-12),
+        BackgroundTransparency=1, Text="", PlaceholderText="Search elements...",
+        TextColor3=Theme.TextPrimary, PlaceholderColor3=Theme.TextSecondary,
+        TextSize=13, Font=Enum.Font.Gotham, ZIndex=502, ClearTextOnFocus=false
+    }, SrchInputF)
+
+    -- Results list
     local SrchList = New("ScrollingFrame", {
-        Size=UDim2.new(1,-16,1,-56), Position=UDim2.new(0,8,0,52),
+        Size=UDim2.new(1,-16,1,-104), Position=UDim2.new(0,8,0,100),
         BackgroundTransparency=1, ScrollBarThickness=3, ScrollBarImageColor3=Theme.Accent,
         CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y, ZIndex=501,
     }, SearchOverlay)
     New("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,4)}, SrchList)
     New("UIPadding", {PaddingTop=UDim.new(0,4), PaddingBottom=UDim.new(0,4)}, SrchList)
 
-    local SrchHint = New("TextLabel", {Size=UDim2.new(1,0,0,50), BackgroundTransparency=1, Text="Start typing to search...", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=true}, SrchList)
-    local SrchNone = New("TextLabel", {Size=UDim2.new(1,0,0,40), BackgroundTransparency=1, Text="No results found", TextColor3=Theme.TextSecondary, TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=false}, SrchList)
+    local SrchHint = New("TextLabel", {
+        Size=UDim2.new(1,0,0,50), BackgroundTransparency=1,
+        Text="Type to search elements...", TextColor3=Theme.TextSecondary,
+        TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=true
+    }, SrchList)
+    local SrchNone = New("TextLabel", {
+        Size=UDim2.new(1,0,0,40), BackgroundTransparency=1,
+        Text="No results found", TextColor3=Theme.TextSecondary,
+        TextSize=12, Font=Enum.Font.Gotham, ZIndex=502, Visible=false
+    }, SrchList)
 
     local _srchItems = {}
     local _searchOpen = false
@@ -557,13 +614,11 @@ function NightLib:CreateWindow(config)
         local count = 0
         for i, entry in ipairs(_searchReg) do
             if entry.title:lower():find(q, 1, true) then
-                local R = New("TextButton", {Size=UDim2.new(1,0,0,34), BackgroundColor3=Theme.PanelAlt, Text="", ZIndex=502, LayoutOrder=i}, SrchList)
-                New("UICorner", {CornerRadius=UDim.new(0,6)}, R)
-                New("TextLabel", {Size=UDim2.new(0,24,1,0), Position=UDim2.new(0,8,0,0), BackgroundTransparency=1, Text=GetIcon(entry.icon), TextColor3=Theme.Accent, TextSize=13, Font=Enum.Font.GothamBold, ZIndex=503}, R)
-                -- highlight matched portion in title
-                local dispTitle = entry.title
-                New("TextLabel", {Size=UDim2.new(1,-40,1,0), Position=UDim2.new(0,32,0,0), BackgroundTransparency=1, Text=dispTitle, TextColor3=Theme.TextPrimary, TextSize=12, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
-                local qlbl = New("TextLabel", {Size=UDim2.new(1,-40,0,14), Position=UDim2.new(0,32,1,-16), BackgroundTransparency=1, Text='matching "'..query..'"', TextColor3=Theme.Accent, TextSize=9, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
+                local R = New("TextButton", {Size=UDim2.new(1,0,0,36), BackgroundColor3=Theme.PanelAlt, Text="", ZIndex=502, LayoutOrder=i}, SrchList)
+                New("UICorner", {CornerRadius=UDim.new(0,7)}, R)
+                New("TextLabel", {Size=UDim2.new(0,24,1,0), Position=UDim2.new(0,10,0,0), BackgroundTransparency=1, Text=GetIcon(entry.icon), TextColor3=Theme.Accent, TextSize=13, Font=Enum.Font.GothamBold, ZIndex=503}, R)
+                New("TextLabel", {Size=UDim2.new(1,-44,0,20), Position=UDim2.new(0,34,0,4), BackgroundTransparency=1, Text=entry.title, TextColor3=Theme.TextPrimary, TextSize=12, Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
+                New("TextLabel", {Size=UDim2.new(1,-44,0,12), Position=UDim2.new(0,34,1,-16), BackgroundTransparency=1, Text='matching "'..query..'"', TextColor3=Theme.Accent, TextSize=9, Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=503}, R)
                 R.MouseEnter:Connect(function() Tween(R, {BackgroundColor3=Theme.Divider}, 0.1) end)
                 R.MouseLeave:Connect(function() Tween(R, {BackgroundColor3=Theme.PanelAlt}, 0.1) end)
                 local fn = entry.fn
@@ -584,8 +639,10 @@ function NightLib:CreateWindow(config)
 
     local function _searchOverlayPos()
         local ap = MF.AbsolutePosition; local as = MF.AbsoluteSize
-        return UDim2.new(0, ap.X + as.X/2 - 170, 0, ap.Y + as.Y/2 - 200)
+        return UDim2.new(0, ap.X + as.X/2 - 170, 0, ap.Y + as.Y/2 - 210)
     end
+
+    local _srchScale = New("UIScale", {Scale=1}, SearchOverlay)
 
     local function _openSearch()
         if _searchOpen then return end
@@ -593,23 +650,26 @@ function NightLib:CreateWindow(config)
         _rebuildSearch("")
         SearchOverlay.Position = _searchOverlayPos()
         SearchOverlay.Visible = true
-        SearchOverlay.Size = UDim2.new(0,340,0,40)
         SearchOverlay.BackgroundTransparency = 1
-        Tween(SearchOverlay, {Size=UDim2.new(0,340,0,400), BackgroundTransparency=0}, 0.28, Enum.EasingStyle.Back)
+        _srchScale.Scale = 0.88
+        Tween(_srchScale, {Scale=1}, 0.34, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
+        Tween(SearchOverlay, {BackgroundTransparency=0}, 0.22, Enum.EasingStyle.Quint)
         task.defer(function() SrchBox:CaptureFocus() end)
     end
 
     local function _closeSearch()
         if not _searchOpen then return end
         _searchOpen = false
-        Tween(SearchOverlay, {Size=UDim2.new(0,340,0,40), BackgroundTransparency=1}, 0.2, Enum.EasingStyle.Quart)
-        task.wait(0.22)
+        Tween(_srchScale, {Scale=0.90}, 0.18, Enum.EasingStyle.Quint)
+        Tween(SearchOverlay, {BackgroundTransparency=1}, 0.18, Enum.EasingStyle.Quint)
+        task.wait(0.20)
         SearchOverlay.Visible = false
         SrchBox.Text = ""
+        _srchScale.Scale = 1
     end
 
     SrchBtn.MouseButton1Click:Connect(_openSearch)
-    SrchCloseBtn.MouseButton1Click:Connect(function() task.spawn(_closeSearch) end)
+    SrchExitBtn.MouseButton1Click:Connect(function() task.spawn(_closeSearch) end)
 
     UIS.InputBegan:Connect(function(i, gpe)
         if not gpe and i.KeyCode == Enum.KeyCode.Escape and _searchOpen then
@@ -617,7 +677,7 @@ function NightLib:CreateWindow(config)
         end
     end)
 
-    -- Floating minimize icon
+    -- ── Floating minimize icon ────────────────────────────────────────────────
     local MinIcon = New("Frame", {
         Size=UDim2.new(0,50,0,50), Position=UDim2.new(0,20,0.5,-25),
         BackgroundColor3=Theme.Background, BorderSizePixel=0, Visible=true, ZIndex=500,
@@ -644,7 +704,7 @@ function NightLib:CreateWindow(config)
             dragging = true
             dragStartPos = Vector2.new(i.Position.X, i.Position.Y)
             frameStartPos = MinIcon.Position
-            Tween(MinIconScale, {Scale=0.9}, 0.1, Enum.EasingStyle.Quart)
+            Tween(MinIconScale, {Scale=0.88}, 0.12, Enum.EasingStyle.Quint)
             moveConn = UIS.InputChanged:Connect(function(inp)
                 if not dragging then return end
                 if inp.UserInputType ~= Enum.UserInputType.MouseMovement
@@ -662,16 +722,16 @@ function NightLib:CreateWindow(config)
             and i.UserInputType ~= Enum.UserInputType.Touch then return end
             local dist = Vector2.new(i.Position.X - dragStartPos.X, i.Position.Y - dragStartPos.Y).Magnitude
             dragging = false
-            Tween(MinIconScale, {Scale=1}, 0.15, Enum.EasingStyle.Back)
+            Tween(MinIconScale, {Scale=1}, 0.22, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
             if moveConn then moveConn:Disconnect(); moveConn = nil end
             if dist <= TAP_THRESHOLD then _setVisible(not visible) end
         end)
 
         MinIcon.MouseEnter:Connect(function()
-            if not dragging then Tween(MinIconScale, {Scale=1.08}, 0.15, Enum.EasingStyle.Back) end
+            if not dragging then Tween(MinIconScale, {Scale=1.1}, 0.18, Enum.EasingStyle.Back) end
         end)
         MinIcon.MouseLeave:Connect(function()
-            if not dragging then Tween(MinIconScale, {Scale=1}, 0.15, Enum.EasingStyle.Quart) end
+            if not dragging then Tween(MinIconScale, {Scale=1}, 0.16, Enum.EasingStyle.Quint) end
         end)
     end
 
@@ -781,6 +841,19 @@ function NightLib:CreateWindow(config)
         }
     end
 
+    -- ── Transparency API ──────────────────────────────────────────────────────
+    function WO:SetTransparency(v)
+        _uiAlpha = math.clamp(v, 0, 0.95)
+        baseBgAlpha = _uiAlpha
+        if visible then
+            Tween(MF, {BackgroundTransparency=_uiAlpha}, 0.18, Enum.EasingStyle.Quart)
+        end
+    end
+
+    function WO:GetTransparency()
+        return _uiAlpha
+    end
+
     function WO:SetVisible(s) _setVisible(s) end
     function WO:GetVisible() return visible end
     function WO:IsVisible() return visible end
@@ -813,6 +886,9 @@ function NightLib:CreateWindow(config)
         local hasActions = cfg2.Actions and next(cfg2.Actions)
         local N = New("Frame", {Size=UDim2.new(1,0,0,hasActions and 86 or 64), BackgroundColor3=cfg2.Color or Theme.NotifyBg, BorderSizePixel=0, BackgroundTransparency=1, ZIndex=601}, NC)
         New("UICorner", {CornerRadius=UDim.new(0,8)}, N)
+        -- Entrance animation
+        local _ns = New("UIScale", {Scale=0.88}, N)
+        Tween(_ns, {Scale=1}, 0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         local xOff = 12
         if cfg2.Image and tonumber(cfg2.Image) then
             New("ImageLabel", {Size=UDim2.new(0,30,0,30), Position=UDim2.new(0,10,0,10), BackgroundTransparency=1, Image="rbxassetid://"..tostring(cfg2.Image), ZIndex=602}, N)
@@ -834,9 +910,13 @@ function NightLib:CreateWindow(config)
         end
         local PB = New("Frame", {Size=UDim2.new(1,0,0,3), Position=UDim2.new(0,0,1,-3), BackgroundColor3=Color3.new(1,1,1), BackgroundTransparency=0.6, BorderSizePixel=0, ZIndex=603}, N)
         New("UICorner", {CornerRadius=UDim.new(0,2)}, PB)
-        Tween(N, {BackgroundTransparency=0.1}, 0.35, Enum.EasingStyle.Quart)
+        Tween(N, {BackgroundTransparency=0.08}, 0.30, Enum.EasingStyle.Quint)
         Tween(PB, {Size=UDim2.new(0,0,0,3)}, dur, Enum.EasingStyle.Linear)
-        task.delay(dur, function() Tween(N, {BackgroundTransparency=1}, 0.3); task.wait(0.3); N:Destroy() end)
+        task.delay(dur, function()
+            Tween(_ns, {Scale=0.90}, 0.18, Enum.EasingStyle.Quint)
+            Tween(N, {BackgroundTransparency=1}, 0.22, Enum.EasingStyle.Quint)
+            task.wait(0.24); N:Destroy()
+        end)
     end
 
     function WO:Dialog(cfg2)
@@ -856,7 +936,7 @@ function NightLib:CreateWindow(config)
         end
         DB.Position = UDim2.new(0.5,-160,0.3,-80)
         DB.BackgroundTransparency = 1
-        Tween(DB, {Position=UDim2.new(0.5,-160,0.5,-80), BackgroundTransparency=0}, 0.3, Enum.EasingStyle.Back)
+        Tween(DB, {Position=UDim2.new(0.5,-160,0.5,-80), BackgroundTransparency=0}, 0.32, Enum.EasingStyle.Back)
     end
 
     function WO:CreateTab(cfg2, iconId)
@@ -888,8 +968,8 @@ function NightLib:CreateWindow(config)
             for _, t in pairs(WO.Tabs) do
                 if t.Frame.Visible then
                     t.Frame.Visible = false
-                    Tween(t.BI, {TextColor3=Theme.TextSecondary}, 0.2)
-                    Tween(t.BA, {BackgroundTransparency=1}, 0.2)
+                    Tween(t.BI, {TextColor3=Theme.TextSecondary}, 0.18)
+                    Tween(t.BA, {BackgroundTransparency=1}, 0.18)
                     t.Btn.BackgroundTransparency = 1
                 end
             end
@@ -1010,8 +1090,8 @@ function NightLib:CreateWindow(config)
                 BFr.MouseEnter:Connect(function() Tween(BFr, {BackgroundColor3=Theme.Divider}, 0.12) end)
                 BFr.MouseLeave:Connect(function() Tween(BFr, {BackgroundColor3=Theme.PanelAlt}, 0.18) end)
                 BFr.MouseButton1Click:Connect(function()
-                    Tween(BFr, {BackgroundColor3=Theme.Accent}, 0.06); task.wait(0.1)
-                    Tween(BFr, {BackgroundColor3=Theme.PanelAlt}, 0.2)
+                    Tween(BFr, {BackgroundColor3=Theme.Accent}, 0.07); task.wait(0.10)
+                    Tween(BFr, {BackgroundColor3=Theme.PanelAlt}, 0.24)
                     task.spawn(bcfg.Callback or function() end)
                 end)
                 _registerSearch(bcfg.Title or bcfg.Name, bcfg.Icon or "plus", function()
@@ -1420,7 +1500,7 @@ function NightLib:CreateWindow(config)
                 end
                 Prev.MouseButton1Click:Connect(function()
                     expanded = not expanded
-                    Tween(CPFr, {Size=UDim2.new(1,0,0,expanded and 170 or 36)}, 0.28, Enum.EasingStyle.Back)
+                    Tween(CPFr, {Size=UDim2.new(1,0,0,expanded and 170 or 36)}, 0.30, Enum.EasingStyle.Back)
                 end)
                 _registerSearch(ccfg.Title or ccfg.Name, "paint", function() Activate() end)
                 local cpObj = {}
@@ -1811,7 +1891,7 @@ function NightLib:CreateWindow(config)
     local function _doShow()
         _animShow()
         if dynTrans then
-            task.delay(0.4, function()
+            task.delay(0.45, function()
                 if not _hovering then
                     Tween(MF, {BackgroundTransparency=idleAlpha}, 0.5, Enum.EasingStyle.Quart)
                 end
