@@ -193,6 +193,10 @@ local Icons = {
 }
 local function GetIcon(n) return Icons[n and n:lower()] or "●" end
 
+NightLib.AssetIcons = {
+    logo = "rbxassetid://82863510537255",
+}
+
 local function _makeTooltip(parent, text, theme)
     if not text or text == "" then return end
     local tip = New("Frame", {
@@ -364,19 +368,19 @@ function NightLib:CreateWindow(config)
         Tween(MF, {Position=UDim2.new(0.5,-340,1.2,0)}, 0.3); task.wait(0.35); SG:Destroy()
     end)
 
-    -- Minimized floating icon (screen-level, draggable)
+    -- Persistent floating icon (always visible, draggable, toggles MF)
     local MinIcon = New("Frame", {
-        Size=UDim2.new(0,46,0,46),
-        Position=UDim2.new(0,20,0.5,-23),
-        BackgroundColor3=Theme.Accent,
-        BorderSizePixel=0, Visible=false, ZIndex=500,
+        Size=UDim2.new(0,50,0,50),
+        Position=UDim2.new(0,20,0.5,-25),
+        BackgroundColor3=Theme.Background,
+        BorderSizePixel=0, Visible=true, ZIndex=500,
     }, SG)
-    New("UICorner", {CornerRadius=UDim.new(0,12)}, MinIcon)
-    New("UIStroke", {Color=Theme.Divider, Thickness=1.5}, MinIcon)
-    New("TextLabel", {
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Text="◑", TextColor3=Color3.new(1,1,1),
-        TextSize=22, Font=Enum.Font.GothamBold, ZIndex=501,
+    New("UICorner", {CornerRadius=UDim.new(0,13)}, MinIcon)
+    New("UIStroke", {Color=Theme.Accent, Thickness=1.5}, MinIcon)
+    New("ImageLabel", {
+        Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4),
+        BackgroundTransparency=1, Image=NightLib.AssetIcons.logo,
+        ScaleType=Enum.ScaleType.Fit, ZIndex=501,
     }, MinIcon)
     local MinIconBtn = New("TextButton", {
         Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
@@ -384,24 +388,36 @@ function NightLib:CreateWindow(config)
     }, MinIcon)
     MakeDraggable(MinIcon, MinIcon)
 
-    local mini = false
-    local function ShowMini()
-        mini = true
-        MF.Visible = false
-        MinIcon.Visible = true
-    end
-    local function HideMini()
-        mini = false
-        MinIcon.Visible = false
-        MF.Visible = true
-    end
-
-    MinIconBtn.MouseButton1Click:Connect(function() HideMini() end)
+    local _dragged = false
+    local _dragDelta = Vector2.new(0,0)
+    MinIcon.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
+            _dragged = false; _dragDelta = Vector2.new(0,0)
+        end
+    end)
+    UIS.InputChanged:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseMovement
+        or i.UserInputType == Enum.UserInputType.Touch then
+            _dragDelta = _dragDelta + Vector2.new(math.abs(i.Delta.X), math.abs(i.Delta.Y))
+            if _dragDelta.Magnitude > 4 then _dragged = true end
+        end
+    end)
+    MinIconBtn.MouseButton1Click:Connect(function()
+        if _dragged then return end
+        visible = not visible
+        MF.Visible = visible
+        NightLib._visible = visible
+        Tween(MinIcon, {BackgroundColor3=visible and Theme.Background or Theme.Accent}, 0.2)
+    end)
 
     local MinB = New("TextButton", {Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-72,0.5,-14), BackgroundColor3=Theme.PanelAlt, Text="-", TextColor3=Theme.TextSecondary, TextSize=14, Font=Enum.Font.GothamBold, ZIndex=3}, TB)
     New("UICorner", {CornerRadius=UDim.new(0,6)}, MinB)
     MinB.MouseButton1Click:Connect(function()
-        if mini then HideMini() else ShowMini() end
+        visible = not visible
+        MF.Visible = visible
+        NightLib._visible = visible
+        Tween(MinIcon, {BackgroundColor3=visible and Theme.Background or Theme.Accent}, 0.2)
     end)
 
     MakeDraggable(MF, TB)
@@ -451,7 +467,7 @@ function NightLib:CreateWindow(config)
         MF.BackgroundColor3=Theme.Background; TB.BackgroundColor3=Theme.Sidebar
         SB.BackgroundColor3=Theme.Sidebar; LogoF.BackgroundColor3=Theme.Accent
         TitleLbl.TextColor3=Theme.TextPrimary; SubLbl.TextColor3=Theme.TextSecondary
-        MinIcon.BackgroundColor3=Theme.Accent
+        MinIcon.BackgroundColor3=visible and Theme.Background or Theme.Accent
     end)
 
     function WO:UpdateTheme(changes)
@@ -461,8 +477,9 @@ function NightLib:CreateWindow(config)
 
     function WO:SetVisible(s)
         visible = s
-        if s then HideMini() else MF.Visible = false end
+        MF.Visible = s
         NightLib._visible = s
+        Tween(MinIcon, {BackgroundColor3=s and Theme.Background or Theme.Accent}, 0.2)
         if _blurEffect then _blurEffect.Enabled = s end
     end
     function WO:GetVisible() return visible end
@@ -487,8 +504,9 @@ function NightLib:CreateWindow(config)
     UIS.InputBegan:Connect(function(i, gpe)
         if not gpe and i.KeyCode == toggleKey then
             visible = not visible
-            if visible then HideMini() else ShowMini() end
+            MF.Visible = visible
             NightLib._visible = visible
+            Tween(MinIcon, {BackgroundColor3=visible and Theme.Background or Theme.Accent}, 0.2)
         end
     end)
 
